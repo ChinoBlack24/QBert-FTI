@@ -1,0 +1,406 @@
+openapi: 3.1.0
+info:
+  title: Q*bert con autómatas — API
+  version: 1.0.0
+  description: |
+    Contrato entre el backend (Python, máquinas con automata-lib) y el frontend (React).
+
+    Este archivo es la fuente de verdad:
+      - backend/tests/api/test_contrato.py comprueba que la API de FastAPI lo cumpla.
+      - frontend genera sus tipos con `npm run tipos`.
+
+    Toda la lógica vive en el backend. El frontend solo manda teclas y dibuja
+    el estado que recibe.
+
+    Errores: el cuerpo es {"detail": "<mensaje>"} (formato estándar de FastAPI).
+    Los errores de validación del cuerpo (422) traen en detail una lista.
+
+servers:
+  - url: /api
+
+tags:
+  - name: partidas
+    description: Una partida en curso (sección 4.5 del informe)
+  - name: maquinas
+    description: Las máquinas por separado (4.2, 4.3, 4.4)
+  - name: piramide
+    description: Geometría para dibujar
+
+paths:
+  /partidas:
+    post:
+      tags: [partidas]
+      summary: Crear una partida
+      operationId: crearPartida
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NuevaPartida" }
+      responses:
+        "201":
+          description: Partida creada, en el estado inicial de las tres máquinas
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EstadoPartida" }
+        "400": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/ErrorValidacion" }
+
+  /partidas/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdPartida"
+    get:
+      tags: [partidas]
+      summary: Estado actual de una partida
+      operationId: obtenerPartida
+      responses:
+        "200":
+          description: Estado de la partida
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EstadoPartida" }
+        "404": { $ref: "#/components/responses/Error" }
+    delete:
+      tags: [partidas]
+      summary: Descartar una partida
+      operationId: borrarPartida
+      responses:
+        "204": { description: Partida borrada }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /partidas/{id}/saltos:
+    parameters:
+      - $ref: "#/components/parameters/IdPartida"
+    post:
+      tags: [partidas]
+      summary: Saltar (una entrada de la Mealy de movimiento)
+      description: |
+        La tecla entra a la Mealy; su salida s actualiza el cubo s (lee p) y
+        la máquina de vidas (lee h(s)). Si la partida ya terminó (game over o
+        nivel completo), no se procesa y `paso` es null.
+      operationId: saltar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Salto" }
+      responses:
+        "200":
+          description: Lo que hizo cada máquina y el estado resultante
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ResultadoSalto" }
+        "404": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/ErrorValidacion" }
+
+  /partidas/{id}/nivel-siguiente:
+    parameters:
+      - $ref: "#/components/parameters/IdPartida"
+    post:
+      tags: [partidas]
+      summary: Pasar al siguiente nivel
+      description: Solo si el nivel actual está completo y no es el último. Las vidas se conservan.
+      operationId: pasarDeNivel
+      responses:
+        "200":
+          description: Estado al empezar el nuevo nivel
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EstadoPartida" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /maquinas:
+    get:
+      tags: [maquinas]
+      summary: Lista de máquinas
+      operationId: listarMaquinas
+      responses:
+        "200":
+          description: Resumen de cada máquina
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ResumenMaquina" }
+
+  /maquinas/{nombre}:
+    parameters:
+      - $ref: "#/components/parameters/NombreMaquina"
+    get:
+      tags: [maquinas]
+      summary: Quíntupla completa <Q, ΣE, ΣS, f, g> de una máquina
+      operationId: obtenerMaquina
+      responses:
+        "200":
+          description: Definición de la máquina
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Maquina" }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /maquinas/{nombre}/traducir:
+    parameters:
+      - $ref: "#/components/parameters/NombreMaquina"
+    post:
+      tags: [maquinas]
+      summary: Traducir una palabra con una máquina
+      operationId: traducir
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Traduccion" }
+      responses:
+        "200":
+          description: Traza paso a paso y palabra de salida (|salida| = |entrada|)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ResultadoTraduccion" }
+        "400": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/ErrorValidacion" }
+
+  /piramide:
+    get:
+      tags: [piramide]
+      summary: Numeración de los cubos
+      operationId: obtenerPiramide
+      responses:
+        "200":
+          description: Filas y posición (fila, columna) de cada cubo
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Piramide" }
+
+components:
+  parameters:
+    IdPartida:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    NombreMaquina:
+      name: nombre
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [mov, cubo1, cubo2, cubo3, vidas]
+
+  responses:
+    Error:
+      description: Error con mensaje
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    ErrorValidacion:
+      description: El cuerpo de la petición no cumple el contrato
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorValidacion" }
+
+  schemas:
+    # ------------------------------------------------------------- pedidos
+    NuevaPartida:
+      type: object
+      properties:
+        nivel: { type: integer, default: 1, description: "1, 2 o 3" }
+
+    Salto:
+      type: object
+      required: [tecla]
+      properties:
+        tecla:
+          type: string
+          enum: [w, a, s, d]
+          description: w arriba-der, a arriba-izq, s abajo-izq, d abajo-der
+
+    Traduccion:
+      type: object
+      required: [palabra]
+      properties:
+        palabra:
+          type: string
+          description: Símbolos de ΣE uno detrás del otro (ej. "sdw", "pXpXX")
+        estado_inicial:
+          type: [string, "null"]
+          default: null
+          description: Si es null, arranca en q0
+
+    # ------------------------------------------------------------ máquinas
+    Transicion:
+      type: object
+      description: Un paso de una MEF; estando en q lee e, pasa a q_nuevo y escribe s
+      required: [q, e, q_nuevo, s]
+      properties:
+        q: { type: string }
+        e: { type: string }
+        q_nuevo: { type: string }
+        s: { type: string }
+
+    ResumenMaquina:
+      type: object
+      required: [nombre, tipo, cantidad_estados, sigma_e, sigma_s]
+      properties:
+        nombre: { type: string }
+        tipo: { type: string, enum: [Mealy, Moore] }
+        cantidad_estados: { type: integer }
+        sigma_e: { type: array, items: { type: string } }
+        sigma_s: { type: array, items: { type: string } }
+
+    Maquina:
+      type: object
+      description: |
+        MEF = <Q, ΣE, ΣS, f, g>. Q y ΣE vienen en el orden de la tabla del informe.
+        En Mealy, g[q][e] es la salida de la transición.
+        En Moore, g[q] es la salida del estado.
+      required: [nombre, tipo, Q, sigma_e, sigma_s, q0, finales, f, g, tabla]
+      properties:
+        nombre: { type: string }
+        tipo: { type: string, enum: [Mealy, Moore] }
+        Q: { type: array, items: { type: string } }
+        sigma_e: { type: array, items: { type: string } }
+        sigma_s: { type: array, items: { type: string } }
+        q0: { type: string }
+        finales: { type: array, items: { type: string } }
+        f:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: { type: string }
+        g:
+          type: object
+          additionalProperties:
+            anyOf:
+              - type: string
+              - type: object
+                additionalProperties: { type: string }
+        tabla: { type: string, description: "La tabla en el formato del informe (→ inicial, * final)" }
+
+    ResultadoTraduccion:
+      type: object
+      required: [pasos, salida, estado_final]
+      properties:
+        pasos: { type: array, items: { $ref: "#/components/schemas/Transicion" } }
+        salida: { type: array, items: { type: string } }
+        estado_final: { type: string }
+
+    # ------------------------------------------------------------ partidas
+    ColorNivel:
+      type: object
+      description: Un estado de la Moore de cubo del nivel actual
+      required: [estado, color, objetivo]
+      properties:
+        estado: { type: string }
+        color: { type: string }
+        objetivo: { type: boolean, description: "true si es estado final" }
+
+    EstadoPartida:
+      type: object
+      required:
+        - id
+        - nivel
+        - ultimo_nivel
+        - estado_movimiento
+        - posicion
+        - estados_cubos
+        - colores
+        - colores_nivel
+        - cubos_en_objetivo
+        - estado_vidas
+        - vidas
+        - salida_mealy
+        - nivel_completo
+        - game_over
+      properties:
+        id: { type: string }
+        nivel: { type: integer }
+        ultimo_nivel: { type: boolean }
+        estado_movimiento: { type: string, description: "Estado de la Mealy (q_i)" }
+        posicion: { type: integer, description: "Cubo donde está Q*bert" }
+        estados_cubos:
+          type: array
+          description: Estado de la Moore de cada cubo, índice = número de cubo
+          items: { type: string }
+        colores:
+          type: array
+          description: Salida g de cada cubo (A, B o C), índice = número de cubo
+          items: { type: string }
+        colores_nivel:
+          type: array
+          items: { $ref: "#/components/schemas/ColorNivel" }
+        cubos_en_objetivo: { type: integer }
+        estado_vidas: { type: string }
+        vidas: { type: integer }
+        salida_mealy:
+          type: array
+          description: Palabra de salida de la Mealy en este nivel
+          items: { type: string }
+        nivel_completo: { type: boolean }
+        game_over: { type: boolean }
+
+    PasoCubo:
+      type: object
+      description: El cubo pisado y su transición q --p--> q_nuevo, con salida color
+      required: [cubo, q, q_nuevo, color]
+      properties:
+        cubo: { type: integer }
+        q: { type: string }
+        q_nuevo: { type: string }
+        color: { type: string }
+
+    Paso:
+      type: object
+      description: Lo que hizo cada máquina en un salto
+      required: [movimiento, cubo, vidas]
+      properties:
+        movimiento: { $ref: "#/components/schemas/Transicion" }
+        cubo:
+          description: null si fue una caída (salida X)
+          anyOf:
+            - $ref: "#/components/schemas/PasoCubo"
+            - type: "null"
+        vidas: { $ref: "#/components/schemas/Transicion" }
+
+    ResultadoSalto:
+      type: object
+      required: [paso, estado]
+      properties:
+        paso:
+          description: null si la partida ya había terminado
+          anyOf:
+            - $ref: "#/components/schemas/Paso"
+            - type: "null"
+        estado: { $ref: "#/components/schemas/EstadoPartida" }
+
+    # ------------------------------------------------------------ pirámide
+    Cubo:
+      type: object
+      required: [numero, fila, columna]
+      properties:
+        numero: { type: integer }
+        fila: { type: integer }
+        columna: { type: integer }
+
+    Piramide:
+      type: object
+      required: [filas, cubos]
+      properties:
+        filas: { type: integer }
+        cubos: { type: array, items: { $ref: "#/components/schemas/Cubo" } }
+
+    # ------------------------------------------------------------- errores
+    Error:
+      type: object
+      required: [detail]
+      properties:
+        detail: { type: string }
+
+    ErrorValidacion:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: array
+          items: { type: object }

@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Tests
+.pytest_cache/
+
+# Restos de copiar archivos desde Windows
+*:Zone.Identifier
+
+# Entornos virtuales
+.venv/
+venv/

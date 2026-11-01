@@ -1,0 +1,141 @@
+:root {
+  --fondo: #121422;
+  --panel: #1c1f34;
+  --texto: #e6e6f0;
+  --tenue: #8c91aa;
+  --resalte: #ffc446;
+  --cara-izq: #385c6e;
+  --cara-der: #223a4a;
+  --qbert: #f57828;
+  color-scheme: dark;
+  font-family: system-ui, sans-serif;
+  color: var(--texto);
+  background: var(--fondo);
+}
+
+body {
+  margin: 0;
+}
+
+h1 {
+  margin: 0 0 1rem;
+  font-size: 1.6rem;
+}
+
+h2 {
+  margin: 0 0 1rem;
+}
+
+h3 {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 1rem;
+}
+
+.tenue {
+  color: var(--tenue);
+}
+
+.centrado {
+  display: grid;
+  place-content: center;
+  min-height: 100vh;
+  text-align: center;
+}
+
+/* --- disposición --------------------------------------------------------- */
+.juego {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  min-height: 100vh;
+}
+
+.tablero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem;
+}
+
+.panel {
+  background: var(--panel);
+  padding: 1.5rem;
+}
+
+/* --- pirámide ------------------------------------------------------------ */
+.piramide {
+  width: min(100%, 640px);
+  height: auto;
+}
+
+.cara-izq {
+  fill: var(--cara-izq);
+}
+
+.cara-der {
+  fill: var(--cara-der);
+}
+
+.cara-sup {
+  stroke: var(--fondo);
+  stroke-width: 1;
+  transition: fill 150ms;
+}
+
+.qbert {
+  transition: transform 120ms ease-out;
+}
+
+.qbert-cuerpo {
+  fill: var(--qbert);
+}
+
+.mensaje {
+  margin-top: 1rem;
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: var(--resalte);
+}
+
+/* --- panel --------------------------------------------------------------- */
+.datos {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.4rem 1rem;
+  margin: 0;
+}
+
+.datos dd {
+  margin: 0;
+}
+
+.colores {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.colores li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.muestra {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 2px;
+}
+
+.traza {
+  margin: 0;
+  color: var(--resalte);
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+}
+
+.ayuda {
+  line-height: 1.6;
+  margin: 0;
+}
