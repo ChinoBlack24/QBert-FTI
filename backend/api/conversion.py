@@ -8,8 +8,8 @@ from __future__ import annotations
 import automatas
 from automatas import MEF, Mealy, Partida
 
-from .esquemas import (ColorNivel, EstadoPartida, Maquina, Paso, PasoCubo, ResumenMaquina,
-                       Transicion)
+from .esquemas import (ColorNivel, EstadoPartida, Maquina, Paso, PasoCubo, PasoTic,
+                       ResumenMaquina, Transicion)
 
 
 def orden_simbolos(s: str):
@@ -34,6 +34,8 @@ def estado(id_: str, p: Partida) -> EstadoPartida:
         cubos_en_objetivo=p.cubos_en_objetivo(),
         estado_vidas=p.estado_vidas,
         vidas=p.cantidad_vidas(),
+        estado_bola=p.estado_bola,
+        posicion_bola=p.posicion_bola(),
         salida_mealy=list(p.salida_mealy),
         nivel_completo=p.nivel_completo(),
         game_over=p.game_over(),
@@ -44,7 +46,18 @@ def paso(p: automatas.Paso) -> Paso:
     return Paso(
         movimiento=transicion(p.mov),
         cubo=PasoCubo(**p.cubo._asdict()) if p.cubo else None,
+        choque=p.choque,
         vidas=transicion(p.vidas),
+        retiro_bola=transicion(p.retiro_bola) if p.retiro_bola else None,
+    )
+
+
+def paso_tic(p: automatas.PasoTic) -> PasoTic:
+    return PasoTic(
+        bola=transicion(p.bola),
+        choque=p.choque,
+        vidas=transicion(p.vidas) if p.vidas else None,
+        retiro_bola=transicion(p.retiro_bola) if p.retiro_bola else None,
     )
 
 

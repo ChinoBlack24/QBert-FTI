@@ -55,10 +55,37 @@ export interface paths {
         /**
          * Saltar (una entrada de la Mealy de movimiento)
          * @description La tecla entra a la Mealy; su salida s actualiza el cubo s (lee p) y
-         *     la máquina de vidas (lee h(s)). Si la partida ya terminó (game over o
-         *     nivel completo), no se procesa y `paso` es null.
+         *     la máquina de vidas, que lee h'(s, j) con j la salida de la bola
+         *     (X si se cayó o saltó al cubo de la bola). Si la partida ya terminó
+         *     (game over o nivel completo), no se procesa y `paso` es null.
          */
         post: operations["saltar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/partidas/{id}/tic": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["IdPartida"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pasa el tiempo (una entrada de la Moore de la bola)
+         * @description La bola lee s o d. Si no se manda `direccion`, el backend tira una
+         *     moneda. Si la bola cae en el cubo de Q*bert, la máquina de vidas lee X
+         *     y la bola también (se retira a bF).
+         *     El frontend lo llama con un temporizador. Si la partida ya terminó,
+         *     no se procesa y `paso` es null.
+         */
+        post: operations["tic"];
         delete?: never;
         options?: never;
         head?: never;
@@ -177,6 +204,13 @@ export interface components {
              */
             tecla: "w" | "a" | "s" | "d";
         };
+        Tic: {
+            /**
+             * @description s abajo-izq, d abajo-der. Si es null, el backend tira una moneda.
+             * @default null
+             */
+            direccion: ("s" | "d") | null;
+        };
         Traduccion: {
             /** @description Símbolos de ΣE uno detrás del otro (ej. "sdw", "pXpXX") */
             palabra: string;
@@ -256,6 +290,10 @@ export interface components {
             cubos_en_objetivo: number;
             estado_vidas: string;
             vidas: number;
+            /** @description Estado de la Moore de la bola (b_i o bF) */
+            estado_bola: string;
+            /** @description Cubo donde está la bola, o null si está fuera de la pirámide */
+            posicion_bola: number | null;
             /** @description Palabra de salida de la Mealy en este nivel */
             salida_mealy: string[];
             nivel_completo: boolean;
@@ -268,12 +306,31 @@ export interface components {
             q_nuevo: string;
             color: string;
         };
-        /** @description Lo que hizo cada máquina en un salto */
+        /** @description Lo que hizo cada máquina en un salto de Q*bert */
         Paso: {
             movimiento: components["schemas"]["Transicion"];
             /** @description null si fue una caída (salida X) */
             cubo: components["schemas"]["PasoCubo"] | null;
+            /** @description true si saltó al cubo donde está la bola */
+            choque: boolean;
             vidas: components["schemas"]["Transicion"];
+            /** @description La bola leyendo X (se retira) si se perdió una vida; si no, null */
+            retiro_bola: components["schemas"]["Transicion"] | null;
+        };
+        /** @description Lo que hizo cada máquina en un tic del reloj */
+        PasoTic: {
+            bola: components["schemas"]["Transicion"];
+            /** @description true si la bola cayó en el cubo de Q*bert */
+            choque: boolean;
+            /** @description La máquina de vidas solo lee (X) si hubo choque; si no, null */
+            vidas: components["schemas"]["Transicion"] | null;
+            /** @description La bola leyendo X (se retira) si hubo choque; si no, null */
+            retiro_bola: components["schemas"]["Transicion"] | null;
+        };
+        ResultadoTic: {
+            /** @description null si la partida ya había terminado */
+            paso: components["schemas"]["PasoTic"] | null;
+            estado: components["schemas"]["EstadoPartida"];
         };
         ResultadoSalto: {
             /** @description null si la partida ya había terminado */
@@ -318,7 +375,7 @@ export interface components {
     };
     parameters: {
         IdPartida: string;
-        NombreMaquina: "mov" | "cubo1" | "cubo2" | "cubo3" | "vidas";
+        NombreMaquina: "mov" | "cubo1" | "cubo2" | "cubo3" | "vidas" | "bola";
     };
     requestBodies: never;
     headers: never;
@@ -418,6 +475,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResultadoSalto"];
+                };
+            };
+            404: components["responses"]["Error"];
+            422: components["responses"]["ErrorValidacion"];
+        };
+    };
+    tic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["IdPartida"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["Tic"];
+            };
+        };
+        responses: {
+            /** @description Lo que hizo cada máquina y el estado resultante */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultadoTic"];
                 };
             };
             404: components["responses"]["Error"];

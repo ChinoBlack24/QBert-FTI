@@ -82,7 +82,12 @@ todavía no soporta TypeScript 7, que es el que usa el proyecto. No hace falta i
 
 ## Estado
 
-Mínimo jugable: la pirámide, Q*bert, los controles (W/A/S/D, ENTER para pasar de nivel,
-R para reiniciar) y un panel con vidas, avance y lo que hizo cada máquina en el último salto.
+Mínimo jugable: la pirámide, Q*bert, la bola, los controles (W/A/S/D, ENTER para pasar de nivel,
+R para reiniciar) y un panel con vidas, avance y lo que hizo cada máquina en el último evento.
+
+El reloj de la bola está en `src/juego/useJuego.ts`: manda `POST /tic` cada `MS_POR_TIC`
+(800 ms) mientras la bola baja, y espera un tiempo al azar (`MS_REAPARECER`, 1,5 a 4 s)
+cuando está fuera, antes de que vuelva a aparecer. Arranca con el primer salto de cada
+nivel. Es solo el ritmo: dónde va la bola y qué pasa al chocar lo decide el backend.
 
 Pendiente: paneles con las máquinas completas (tabla/diagrama con el estado actual resaltado).

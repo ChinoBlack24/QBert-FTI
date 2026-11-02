@@ -104,19 +104,7 @@ class MEF:
         final = pasos[-1].q_nuevo if pasos else (self.q0 if q is None else q)
         return [t.s for t in pasos], final
 
-    # --- cómo se muestra (cada modelo lo escribe a su manera) --------------
-    def explicar_salida(self, t: Transicion) -> str:
-        """g aplicada en la transición t, escrita como en el apunte."""
-        raise NotImplementedError
-
-    def etiqueta_estado(self, q: str) -> str:
-        """Texto del nodo q en el diagrama."""
-        raise NotImplementedError
-
-    def etiqueta_arco(self, q: str, e: str) -> str:
-        """Texto del arco que sale de q leyendo e."""
-        raise NotImplementedError
-
+    # --- tabla en el formato del informe -----------------------------------
     def tabla(self) -> str:
         raise NotImplementedError
 
@@ -141,15 +129,6 @@ class Mealy(MEF):
     def paso(self, q, e):
         return self.f.transitions[q][e], self.g[q][e]
 
-    def explicar_salida(self, t):
-        return f"g({t.q}, {t.e}) = {t.s}"
-
-    def etiqueta_estado(self, q):
-        return q
-
-    def etiqueta_arco(self, q, e):
-        return f"{e}/{self.g[q][e]}"
-
     def tabla(self):
         filas = [["Q"] + self.simbolos]
         for q in self.orden:
@@ -171,15 +150,6 @@ class Moore(MEF):
     def paso(self, q, e):
         p = self.f.transitions[q][e]
         return p, self.g[p]  # salida del estado al que se transiciona
-
-    def explicar_salida(self, t):
-        return f"g({t.q_nuevo}) = {t.s}"
-
-    def etiqueta_estado(self, q):
-        return f"{q}/{self.g[q]}"
-
-    def etiqueta_arco(self, q, e):
-        return e
 
     def tabla(self):
         filas = [["Q/ΣS"] + self.simbolos]

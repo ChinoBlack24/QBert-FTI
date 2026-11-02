@@ -10,7 +10,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-NombreMaquina = Literal["mov", "cubo1", "cubo2", "cubo3", "vidas"]
+NombreMaquina = Literal["mov", "cubo1", "cubo2", "cubo3", "vidas", "bola"]
 
 
 class NuevaPartida(BaseModel):
@@ -19,6 +19,10 @@ class NuevaPartida(BaseModel):
 
 class Salto(BaseModel):
     tecla: Literal["w", "a", "s", "d"]
+
+
+class Tic(BaseModel):
+    direccion: Literal["s", "d"] | None = None
 
 
 class Traduccion(BaseModel):
@@ -78,6 +82,8 @@ class EstadoPartida(BaseModel):
     cubos_en_objetivo: int
     estado_vidas: str
     vidas: int
+    estado_bola: str
+    posicion_bola: int | None
     salida_mealy: list[str]
     nivel_completo: bool
     game_over: bool
@@ -93,11 +99,25 @@ class PasoCubo(BaseModel):
 class Paso(BaseModel):
     movimiento: Transicion
     cubo: PasoCubo | None
+    choque: bool
     vidas: Transicion
+    retiro_bola: Transicion | None
+
+
+class PasoTic(BaseModel):
+    bola: Transicion
+    choque: bool
+    vidas: Transicion | None
+    retiro_bola: Transicion | None
 
 
 class ResultadoSalto(BaseModel):
     paso: Paso | None
+    estado: EstadoPartida
+
+
+class ResultadoTic(BaseModel):
+    paso: PasoTic | None
     estado: EstadoPartida
 
 

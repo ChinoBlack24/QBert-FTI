@@ -1,7 +1,7 @@
 """
 Geometría de la pirámide: 7 filas, 28 cubos.
 
-No es una máquina. La usan la consola y la ventana para dibujar, y los tests
+No es una máquina. La usan la API (para que el frontend dibuje) y los tests
 para comprobar que la tabla de movimiento es correcta.
 
 Numeración: la fila r (0..6) tiene r+1 cubos y el cubo 0 es la cima.

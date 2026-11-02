@@ -38,11 +38,3 @@ def test_tabla_sin_estado_inicial():
 def test_estado_inicial_inexistente():
     with pytest.raises(ValueError):
         crear_movimiento().traducir("s", "q99")
-
-
-def test_explicacion_de_la_salida_segun_el_modelo():
-    """Mealy: g(q, e).  Moore: g del estado al que se transiciona."""
-    [t] = crear_movimiento().traza("s")
-    assert crear_movimiento().explicar_salida(t) == "g(q0, s) = 1"
-    [t] = crear_vidas().traza("X")
-    assert crear_vidas().explicar_salida(t) == "g(V2) = 2"

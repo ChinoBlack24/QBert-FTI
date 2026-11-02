@@ -1,7 +1,7 @@
 /**
  * La pirámide en perspectiva isométrica, en SVG. Recibe todo calculado:
  * la posición (fila, columna) de cada cubo viene del backend (/api/piramide)
- * y los colores y la posición de Q*bert, del estado de la partida.
+ * y los colores y las posiciones de Q*bert y de la bola, del estado de la partida.
  */
 
 import type { EstadoPartida, Piramide as DatosPiramide } from "../api/cliente";
@@ -42,9 +42,19 @@ function Qbert({ x, y }: { x: number; y: number }) {
   );
 }
 
+function Bola({ x, y }: { x: number; y: number }) {
+  return (
+    <g className="bola" style={{ transform: `translate(${x}px, ${y - 12}px)` }}>
+      <circle r={11} className="bola-cuerpo" />
+      <circle cx={-4} cy={-4} r={3} className="bola-brillo" />
+    </g>
+  );
+}
+
 export function Piramide({ datos, estado }: { datos: DatosPiramide; estado: EstadoPartida }) {
   const cubos = datos.cubos.map((c) => ({ ...c, ...centro(c.fila, c.columna) }));
   const qbert = cubos[estado.posicion];
+  const bola = estado.posicion_bola === null ? null : cubos[estado.posicion_bola];
   const ancho = datos.filas * LADO;
   const alto = (datos.filas - 1) * (MEDIO + ALTO_CARA) + CUARTO + ALTO_CARA;
 
@@ -53,6 +63,7 @@ export function Piramide({ datos, estado }: { datos: DatosPiramide; estado: Esta
       {cubos.map((c) => (
         <Cubo key={c.numero} x={c.x} y={c.y} color={COLORES[estado.colores[c.numero]] ?? "#888"} />
       ))}
+      {bola && <Bola x={bola.x} y={bola.y} />}
       {!estado.game_over && <Qbert x={qbert.x} y={qbert.y} />}
     </svg>
   );

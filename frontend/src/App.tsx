@@ -1,5 +1,5 @@
 /**
- * Mínimo jugable: la pirámide, Q*bert, el teclado y un panel con el estado.
+ * Mínimo jugable: la pirámide, Q*bert, la bola, el teclado y un panel con el estado.
  * Toda la lógica la resuelve el backend; acá solo se dibuja lo que devuelve.
  */
 
@@ -12,7 +12,7 @@ import { useJuego } from "./juego/useJuego";
 const TECLAS: Record<string, Tecla> = { w: "w", a: "a", s: "s", d: "d" };
 
 export default function App() {
-  const { piramide, estado, ultimoPaso, error, saltar, siguienteNivel, nuevaPartida } = useJuego();
+  const { piramide, estado, ultimo, error, saltar, siguienteNivel, nuevaPartida } = useJuego();
 
   useEffect(() => {
     function alApretar(ev: KeyboardEvent) {
@@ -53,7 +53,7 @@ export default function App() {
         <Piramide datos={piramide} estado={estado} />
         {mensaje && <p className="mensaje">{mensaje}</p>}
       </section>
-      <Panel estado={estado} ultimoPaso={ultimoPaso} />
+      <Panel estado={estado} ultimo={ultimo} />
     </main>
   );
 }

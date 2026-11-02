@@ -7,6 +7,7 @@
   --cara-izq: #385c6e;
   --cara-der: #223a4a;
   --qbert: #f57828;
+  --bola: #e0344a;
   color-scheme: dark;
   font-family: system-ui, sans-serif;
   color: var(--texto);
@@ -87,6 +88,24 @@ h3 {
 
 .qbert-cuerpo {
   fill: var(--qbert);
+}
+
+.bola {
+  transition: transform 200ms ease-in;
+}
+
+.bola-cuerpo {
+  fill: var(--bola);
+}
+
+.bola-brillo {
+  fill: #fff;
+  opacity: 0.6;
+}
+
+.choque {
+  color: var(--bola);
+  font-weight: bold;
 }
 
 .mensaje {
