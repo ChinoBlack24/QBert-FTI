@@ -12,7 +12,10 @@ import { useJuego } from "./juego/useJuego";
 const TECLAS: Record<string, Tecla> = { w: "w", a: "a", s: "s", d: "d" };
 
 export default function App() {
-  const { piramide, estado, ultimo, error, saltar, siguienteNivel, nuevaPartida } = useJuego();
+  const {
+    piramide, estado, ultimo, ultimoSalto, coloresCongelados, vistaQbert, error,
+    saltar, siguienteNivel, nuevaPartida,
+  } = useJuego();
 
   useEffect(() => {
     function alApretar(ev: KeyboardEvent) {
@@ -50,7 +53,8 @@ export default function App() {
     <main className="juego">
       <section className="tablero">
         <h1>Q*bert con autómatas</h1>
-        <Piramide datos={piramide} estado={estado} />
+        <Piramide datos={piramide} estado={estado} ultimo={ultimo} ultimoSalto={ultimoSalto}
+          coloresCongelados={coloresCongelados} vistaQbert={vistaQbert} />
         {mensaje && <p className="mensaje">{mensaje}</p>}
       </section>
       <Panel estado={estado} ultimo={ultimo} />

@@ -82,26 +82,11 @@ h3 {
   transition: fill 150ms;
 }
 
-.qbert {
-  transition: transform 120ms ease-out;
+/* Pixel art: que al agrandarlo no se vea borroso. */
+.sprite {
+  image-rendering: pixelated;
 }
 
-.qbert-cuerpo {
-  fill: var(--qbert);
-}
-
-.bola {
-  transition: transform 200ms ease-in;
-}
-
-.bola-cuerpo {
-  fill: var(--bola);
-}
-
-.bola-brillo {
-  fill: #fff;
-  opacity: 0.6;
-}
 
 .choque {
   color: var(--bola);
