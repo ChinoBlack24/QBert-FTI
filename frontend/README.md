@@ -84,5 +84,7 @@ todavía no soporta TypeScript 7, que es el que usa el proyecto. No hace falta i
 
 Mínimo jugable: la pirámide, Q*bert, los controles (W/A/S/D, ENTER para pasar de nivel,
 R para reiniciar) y un panel con vidas, avance y lo que hizo cada máquina en el último salto.
+Cada cambio real de color de un cubo suma 30 puntos y completar un nivel suma 100. El puntaje
+actual se reinicia al empezar una partida nueva; el récord se conserva en `localStorage` del navegador.
 
 Pendiente: paneles con las máquinas completas (tabla/diagrama con el estado actual resaltado).

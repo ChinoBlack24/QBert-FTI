@@ -12,7 +12,10 @@ import { useJuego } from "./juego/useJuego";
 const TECLAS: Record<string, Tecla> = { w: "w", a: "a", s: "s", d: "d" };
 
 export default function App() {
-  const { piramide, estado, ultimoPaso, error, saltar, siguienteNivel, nuevaPartida } = useJuego();
+  const {
+    piramide, estado, ultimoPaso, error, puntaje, mejorPuntaje, errorPuntaje,
+    saltar, siguienteNivel, nuevaPartida,
+  } = useJuego();
 
   useEffect(() => {
     function alApretar(ev: KeyboardEvent) {
@@ -48,6 +51,11 @@ export default function App() {
 
   return (
     <main className="juego">
+      <div className="marcador" aria-label="Puntajes">
+        <p aria-live="polite">Puntaje actual: <strong>{puntaje}</strong> pts</p>
+        <p>Récord: <strong>{mejorPuntaje}</strong> pts</p>
+        {errorPuntaje && <p className="error-puntaje" role="alert">{errorPuntaje}</p>}
+      </div>
       <section className="tablero">
         <h1>Q*bert con autómatas</h1>
         <Piramide datos={piramide} estado={estado} />
