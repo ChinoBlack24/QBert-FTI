@@ -7,6 +7,7 @@
   --cara-izq: #385c6e;
   --cara-der: #223a4a;
   --qbert: #f57828;
+  --bola: #e0344a;
   color-scheme: dark;
   font-family: system-ui, sans-serif;
   color: var(--texto);
@@ -108,12 +109,15 @@ h3 {
   transition: fill 150ms;
 }
 
-.qbert {
-  transition: transform 120ms ease-out;
+/* Pixel art: que al agrandarlo no se vea borroso. */
+.sprite {
+  image-rendering: pixelated;
 }
 
-.qbert-cuerpo {
-  fill: var(--qbert);
+
+.choque {
+  color: var(--bola);
+  font-weight: bold;
 }
 
 .mensaje {

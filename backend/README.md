@@ -9,7 +9,8 @@ backend/
     movimiento.py   4.2  Mealy de movimiento
     cubo.py         4.3  Moore de color de cubo (una tabla por nivel)
     vidas.py        4.4  Moore de vidas
-    partida.py      4.5  conexión entre máquinas (h, AF_i) y un salto
+    bola.py              Moore del enemigo: baja al azar (s o d) con cada tic; con X se retira
+    partida.py      4.5  conexión entre máquinas (h', AF_i): saltos (teclado) y tics (reloj)
     piramide.py          geometría de la pirámide (no es una máquina)
 
   api/            LA API: expone automatas/ por HTTP con FastAPI. No tiene lógica propia.
@@ -18,7 +19,6 @@ backend/
     rutas.py        endpoints
     main.py         la app
 
-  consola.py      consola para probar las máquinas sin API ni frontend
   juego.py        ventana con pygame (opcional)
   tests/
     automatas/    tests de la lógica (incluye que automatas/ no dependa de la API)
@@ -62,28 +62,35 @@ python -m pytest tests/automatas    # solo la lógica
 
 Correrlos siempre antes de commitear.
 
-## Probar la lógica sin API
+## La bola y los eventos
+
+El sistema recibe dos tipos de evento y cada uno va solo a su máquina:
+
+- **tecla** (`Partida.saltar`): la lee la Mealy de Q*bert.
+- **tic del reloj** (`Partida.tic`): la lee la Moore de la bola, con `s` o `d`.
+
+La dirección del tic la elige quien llama (la API tira una moneda), no la máquina:
+la bola es determinista y el azar está en quién escribe su palabra de entrada.
+
+Después de cada evento se compara el cubo de Q*bert con la salida de la bola. Si
+coinciden, la máquina de vidas lee `X`, igual que en una caída. Como nunca se mueven
+los dos en el mismo evento, no pueden cruzarse sin chocar.
+
+Cada vez que la máquina de vidas lee `X` (choque o caída), la bola también lee `X` y
+sale de la pirámide (`bF`). Así no puede quitar dos vidas seguidas.
+
+## Usar la lógica desde Python
+
+El juego se ve en el frontend. Para probar una máquina suelta o sacar una tabla
+para el informe, desde `backend/`:
 
 ```bash
-python consola.py                   # modo interactivo; escribí "help"
-python consola.py traducir mov sdw  # un comando suelto
+python -c "from automatas import crear_bola; print(crear_bola().tabla())"
 ```
 
-```
-qbert> mapa                          # numeración de los cubos
-qbert> tabla mov                     # matriz f/g de la Mealy
-qbert> traducir mov sdw              # traza paso a paso
-qbert> traducir mov w q4             # arrancando desde q4
-qbert> traducir vidas pXpXX
-qbert> interseccion 3 0,1,2 0 1 2    # AFD intersección de los cubos 0, 1, 2
-qbert> jugar 1                       # partida en texto (wasd + Enter)
-qbert> diagrama vidas vidas.png      # grafo (necesita pygraphviz)
-qbert> niveles
-```
-
-Máquinas: `mov`, `cubo1`, `cubo2`, `cubo3`, `vidas`.
-
-Desde Python:
+Máquinas: `crear_movimiento()`, `crear_cubo(1|2|3)`, `crear_vidas()`, `crear_bola()`.
+`http://localhost:8000/docs` permite lo mismo desde el navegador
+(`GET /api/maquinas/{nombre}`, `POST /api/maquinas/{nombre}/traducir`).
 
 ```python
 >>> from automatas import crear_movimiento, Partida
@@ -122,7 +129,7 @@ q1/B    q2
 q2/C*   q2
 ```
 
-Si cambia una tabla en el informe, se cambia acá igual. `tabla <maquina>` en la consola la imprime en el mismo formato.
+Si cambia una tabla en el informe, se cambia acá igual. `tabla()` la imprime en el mismo formato.
 
 La caída se representa con `X` y no con `C`, para no confundirla con el color C del nivel 2.
 
@@ -132,6 +139,8 @@ La caída se representa con `X` y no con `C`, para no confundirla con el color C
 - cada tabla impresa se puede volver a leer y da la misma máquina;
 - la salida de cada máquina tiene la misma longitud que la entrada;
 - los niveles 1 y 2 se pueden completar sin perder vidas;
+- las filas de la bola coinciden con la Mealy de movimiento restringida a $\{s, d\}$;
+- el choque resta una vida tanto si salta Q*bert como si cae la bola, y una caída con choque resta una sola;
 - la integración (4.5) da el mismo resultado que los AFD $AF_i$ leyendo la salida de la Mealy;
 - la intersección de `automata-lib` (3.3) acepta exactamente cuando aceptan todos los cubos;
 - `automatas/` no depende de la API;

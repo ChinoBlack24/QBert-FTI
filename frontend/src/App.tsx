@@ -1,5 +1,5 @@
 /**
- * Mínimo jugable: la pirámide, Q*bert, el teclado y un panel con el estado.
+ * Mínimo jugable: la pirámide, Q*bert, la bola, el teclado y un panel con el estado.
  * Toda la lógica la resuelve el backend; acá solo se dibuja lo que devuelve.
  */
 
@@ -13,8 +13,8 @@ const TECLAS: Record<string, Tecla> = { w: "w", a: "a", s: "s", d: "d" };
 
 export default function App() {
   const {
-    piramide, estado, ultimoPaso, error, puntaje, mejorPuntaje, errorPuntaje,
-    saltar, siguienteNivel, nuevaPartida,
+    piramide, estado, ultimo, ultimoSalto, coloresCongelados, vistaQbert, error,
+    puntaje, mejorPuntaje, errorPuntaje, saltar, siguienteNivel, nuevaPartida,
   } = useJuego();
 
   useEffect(() => {
@@ -58,10 +58,11 @@ export default function App() {
       </div>
       <section className="tablero">
         <h1>Q*bert con autómatas</h1>
-        <Piramide datos={piramide} estado={estado} />
+        <Piramide datos={piramide} estado={estado} ultimo={ultimo} ultimoSalto={ultimoSalto}
+          coloresCongelados={coloresCongelados} vistaQbert={vistaQbert} />
         {mensaje && <p className="mensaje">{mensaje}</p>}
       </section>
-      <Panel estado={estado} ultimoPaso={ultimoPaso} />
+      <Panel estado={estado} ultimo={ultimo} />
     </main>
   );
 }

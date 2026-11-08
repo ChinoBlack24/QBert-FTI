@@ -73,7 +73,7 @@ def test_borrar(partida):
 
 def test_maquinas():
     nombres = [m["nombre"] for m in cliente.get("/api/maquinas").json()]
-    assert nombres == ["mov", "cubo1", "cubo2", "cubo3", "vidas"]
+    assert nombres == ["mov", "cubo1", "cubo2", "cubo3", "vidas", "bola"]
 
 
 def test_quintupla_mealy():
@@ -103,3 +103,47 @@ def test_piramide():
     p = cliente.get("/api/piramide").json()
     assert p["filas"] == 7 and len(p["cubos"]) == 28
     assert p["cubos"][4] == {"numero": 4, "fila": 2, "columna": 1}
+
+
+def test_tic_con_direccion(partida):
+    cliente.post(f"/api/partidas/{partida['id']}/saltos", json={"tecla": "s"})  # Q*bert sale de la cima
+    r = cliente.post(f"/api/partidas/{partida['id']}/tic", json={"direccion": "s"}).json()
+    assert r["paso"]["bola"] == {"q": "bF", "e": "s", "q_nuevo": "b0", "s": "0"}
+    assert r["paso"]["choque"] is False and r["paso"]["vidas"] is None
+    assert r["estado"]["posicion_bola"] == 0 and r["estado"]["estado_bola"] == "b0"
+
+
+def test_tic_sin_cuerpo_tira_moneda(partida):
+    for tecla in "sd":                             # Q*bert a 4, fuera del camino de la bola
+        cliente.post(f"/api/partidas/{partida['id']}/saltos", json={"tecla": tecla})
+    url = f"/api/partidas/{partida['id']}/tic"
+    cliente.post(url)                              # entra a b0
+    r = cliente.post(url).json()
+    assert r["paso"]["bola"]["e"] in {"s", "d"}
+    assert r["estado"]["posicion_bola"] in {1, 2}
+
+
+def test_tic_direccion_invalida(partida):
+    r = cliente.post(f"/api/partidas/{partida['id']}/tic", json={"direccion": "w"})
+    assert r.status_code == 422
+
+
+def test_choque_por_api(partida):
+    base = f"/api/partidas/{partida['id']}"
+    cliente.post(f"{base}/saltos", json={"tecla": "s"})   # Q*bert en 1
+    cliente.post(f"{base}/tic", json={"direccion": "s"})  # bola en 0
+    r = cliente.post(f"{base}/tic", json={"direccion": "s"}).json()  # bola en 1
+    assert r["paso"]["choque"] is True
+    assert r["paso"]["vidas"]["e"] == CAIDA
+    assert r["paso"]["retiro_bola"] == {"q": "b1", "e": CAIDA, "q_nuevo": "bF", "s": "F"}
+    assert r["estado"]["vidas"] == 2 and r["estado"]["posicion_bola"] is None
+
+
+def test_partida_nueva_bola_fuera(partida):
+    assert partida["estado_bola"] == "bF" and partida["posicion_bola"] is None
+
+
+def test_quintupla_bola():
+    m = cliente.get("/api/maquinas/bola").json()
+    assert m["tipo"] == "Moore" and m["q0"] == "bF" and m["sigma_e"] == ["s", "d", "X"]
+    assert m["g"]["bF"] == "F" and m["f"]["b27"] == {"s": "bF", "d": "bF", "X": "bF"}

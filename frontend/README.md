@@ -50,6 +50,9 @@ src/
   juego/
     useJuego.ts    estado del juego: manda cada acción al backend y guarda la respuesta
     Piramide.tsx   la pirámide isométrica y Q*bert (SVG)
+    QbertSprite.tsx  Q*bert con sprites (hacia dónde mira = última tecla de la Mealy)
+    BolaSprite.tsx   la bola roja con sprites (rebota al caer en cada cubo)
+    useSalto.ts      el salto en arco (parábola) de Q*bert y la bola entre cubos
     Panel.tsx      nivel, vidas, colores y la traza del último salto
     colores.ts     color de pantalla de cada salida A, B, C
   App.tsx          arma la pantalla y escucha el teclado
@@ -82,9 +85,16 @@ todavía no soporta TypeScript 7, que es el que usa el proyecto. No hace falta i
 
 ## Estado
 
-Mínimo jugable: la pirámide, Q*bert, los controles (W/A/S/D, ENTER para pasar de nivel,
-R para reiniciar) y un panel con vidas, avance y lo que hizo cada máquina en el último salto.
+Mínimo jugable: la pirámide, Q*bert, la bola, los controles (W/A/S/D, ENTER para pasar de nivel,
+R para reiniciar) y un panel con vidas, avance y lo que hizo cada máquina en el último evento.
 Cada cambio real de color de un cubo suma 30 puntos y completar un nivel suma 100. El puntaje
 actual se reinicia al empezar una partida nueva; el récord se conserva en `localStorage` del navegador.
+
+El reloj de la bola está en `src/juego/useJuego.ts`: manda `POST /tic` cada `MS_POR_TIC`
+(800 ms) mientras la bola baja, y espera un tiempo al azar (`MS_REAPARECER`, 1,5 a 4 s)
+cuando está fuera, antes de que vuelva a aparecer. Arranca con el primer salto de cada
+nivel. Es solo el ritmo: dónde va la bola y qué pasa al chocar lo decide el backend.
+
+Los sprites están en `public/sprites/` (créditos en `public/sprites/CREDITOS.md`).
 
 Pendiente: paneles con las máquinas completas (tabla/diagrama con el estado actual resaltado).

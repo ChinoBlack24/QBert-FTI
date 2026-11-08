@@ -6,7 +6,7 @@ una Moore de color por cubo y una Moore de vidas.
 
 ```
 contrato-api/   openapi.yaml: lo que el backend ofrece y el frontend usa
-backend/        automatas/ (la lógica, solo automata-lib) + api/ (FastAPI) + consola + tests
+backend/        automatas/ (la lógica, solo automata-lib) + api/ (FastAPI) + tests
 frontend/       React + TypeScript (Vite). Solo dibuja; la lógica está en el backend
 prueba.py       primera prueba de automata-lib (genera afd.png)
 ```
@@ -28,8 +28,8 @@ Son dos programas y cada uno va en su terminal. Los pasos completos están en ca
 
 Primero el backend, después el frontend.
 
-Sin frontend también se puede probar todo desde la consola: `python consola.py` en `backend/`.
-Ver `backend/README.md`.
+Las máquinas sueltas se pueden probar desde `http://localhost:8000/docs` o desde Python
+(ver `backend/README.md`).
 
 ## Si cambia la API
 

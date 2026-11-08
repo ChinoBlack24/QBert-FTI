@@ -12,12 +12,15 @@ export type Esquemas = components["schemas"];
 export type EstadoPartida = Esquemas["EstadoPartida"];
 export type ResultadoSalto = Esquemas["ResultadoSalto"];
 export type Paso = Esquemas["Paso"];
+export type ResultadoTic = Esquemas["ResultadoTic"];
+export type PasoTic = Esquemas["PasoTic"];
 export type Transicion = Esquemas["Transicion"];
 export type Maquina = Esquemas["Maquina"];
 export type ResumenMaquina = Esquemas["ResumenMaquina"];
 export type ResultadoTraduccion = Esquemas["ResultadoTraduccion"];
 export type Piramide = Esquemas["Piramide"];
 export type Tecla = Esquemas["Salto"]["tecla"];
+export type Direccion = NonNullable<Esquemas["Tic"]["direccion"]>;
 export type NombreMaquina = operations["obtenerMaquina"]["parameters"]["path"]["nombre"];
 
 /** Prefijo de la API (servers[0].url del contrato). En desarrollo Vite lo redirige al backend. */
@@ -65,6 +68,10 @@ export const borrarPartida = (id: string) =>
 
 export const saltar = (id: string, tecla: Tecla) =>
   pedir<ResultadoSalto>("POST", `/partidas/${id}/saltos`, { tecla });
+
+/** Pasa el tiempo: la bola baja. Sin dirección, el backend tira una moneda. */
+export const tic = (id: string, direccion?: Direccion) =>
+  pedir<ResultadoTic>("POST", `/partidas/${id}/tic`, { direccion: direccion ?? null });
 
 export const pasarDeNivel = (id: string) =>
   pedir<EstadoPartida>("POST", `/partidas/${id}/nivel-siguiente`);

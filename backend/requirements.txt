@@ -12,4 +12,3 @@ pyyaml>=6          # tests/api/test_contrato.py lee contrato-api/openapi.yaml
 
 # Opcionales
 # pygame-ce          ventana (juego.py)
-# pygraphviz         comando "diagrama" (necesita: sudo apt install graphviz graphviz-dev)
