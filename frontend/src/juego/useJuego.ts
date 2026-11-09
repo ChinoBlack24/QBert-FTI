@@ -27,6 +27,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as api from "../api/cliente";
 import type { EstadoPartida, Paso, PasoTic, Piramide, Tecla } from "../api/cliente";
+import { gifColision, gifGameover, reproducirEfecto } from "./efectos";
 
 /** Cada cuánto baja la bola mientras está en la pirámide, en milisegundos. */
 export const MS_POR_TIC = 800;
@@ -38,6 +39,8 @@ export const MS_SALTO = 500;
 export const MS_REAPARICION = 2000;
 /** Cuánto queda quieto Q*bert después de que lo choca un enemigo. */
 export const MS_ESPERA_CHOQUE = 1000;
+/** Cuánto dura la animación superpuesta de colisión. */
+export const MS_EXPLOSION = 500;
 
 /** Qué hace Q*bert en pantalla mientras el backend ya lo tiene en su nuevo estado. */
 export type VistaQbert =
@@ -81,6 +84,8 @@ export function useJuego() {
   // Colores que se ven mientras Q*bert está en el aire (los de antes del salto).
   const [coloresCongelados, setColoresCongelados] = useState<string[] | null>(null);
   const [vistaQbert, setVistaQbert] = useState<VistaQbert>({ tipo: "normal" });
+  const [explosion, setExplosion] = useState<{ id: number; src: string } | null>(null);
+  const [gameoverGif, setGameoverGif] = useState<{ src: string; duracionMs: number } | null>(null);
   const [enPausa, setEnPausa] = useState(false);
   const [puntaje, setPuntaje] = useState(0);
   const [mejorPuntaje, setMejorPuntaje] = useState(puntajeGuardado.puntaje);
@@ -99,12 +104,21 @@ export function useJuego() {
   const bloqueadoHasta = useRef(0);
   // Temporizadores de animación pendientes, para cancelarlos al reiniciar.
   const temporizadores = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const secuenciaExplosion = useRef(0);
 
   // Hasta cuándo está pausado el reloj de la bola (puede alargarse si se juntan dos pausas).
   const pausaHasta = useRef(0);
 
   const despues = (ms: number, accion: () => void) => {
     temporizadores.current.push(setTimeout(accion, ms));
+  };
+
+  const mostrarExplosion = () => {
+    const id = ++secuenciaExplosion.current;
+    setExplosion({ id, src: gifColision() });
+    despues(MS_EXPLOSION, () => {
+      setExplosion((actual) => actual?.id === id ? null : actual);
+    });
   };
 
   /** No acepta teclas durante `ms` (si ya estaba bloqueado por más tiempo, queda así). */
@@ -144,8 +158,17 @@ export function useJuego() {
   }, []);
 
   const actualizar = (nuevo: EstadoPartida) => {
+    const gameoverNuevo = !estadoActual.current?.game_over && nuevo.game_over;
     estadoActual.current = nuevo;
     setEstado(nuevo);
+    if (gameoverNuevo) {
+      const gif = gifGameover();
+      setGameoverGif(gif);
+      despues(gif.duracionMs, () => {
+        setGameoverGif((actual) => actual?.src === gif.src ? null : actual);
+      });
+      reproducirEfecto("gameover");
+    }
   };
 
   const empezar = (nuevo: EstadoPartida) => {
@@ -159,6 +182,8 @@ export function useJuego() {
     setRelojEnMarcha(false);
     setColoresCongelados(null);
     setVistaQbert({ tipo: "normal" });
+    setExplosion(null);
+    setGameoverGif(null);
     setEnPausa(false);
   };
 
@@ -194,6 +219,14 @@ export function useJuego() {
       setUltimo({ tipo: "salto", paso });
       setUltimoSalto(paso);
       setRelojEnMarcha(true);
+      if (paso.choque) {
+        mostrarExplosion();
+        reproducirEfecto("colision");
+      } else if (paso.movimiento.s === "X") {
+        reproducirEfecto("caida");
+      } else {
+        reproducirEfecto(tecla === "s" || tecla === "d" ? "abajo" : "arriba");
+      }
 
       // Puntaje: 30 por cada cambio real de color de un cubo, 100 al completar el nivel.
       if (paso.cubo && antes.colores[paso.cubo.cubo] !== estado.colores[paso.cubo.cubo]) {
@@ -229,7 +262,9 @@ export function useJuego() {
     const { paso, estado } = await api.tic(idPartida.current);
     actualizar(estado);
     if (paso) setUltimo({ tipo: "tic", paso });
-    if (paso?.choque) {
+    if (paso?.choque && !estado.game_over) {
+      mostrarExplosion();
+      reproducirEfecto("colision");
       // La bola le cayó encima: queda quieto MS_ESPERA_CHOQUE.
       bloquear(MS_ESPERA_CHOQUE);
       pausar(MS_ESPERA_CHOQUE);
@@ -276,7 +311,7 @@ export function useJuego() {
   }, [enJuego, tic]);
 
   return {
-    piramide, estado, ultimo, ultimoSalto, coloresCongelados, vistaQbert, error,
+    piramide, estado, ultimo, ultimoSalto, coloresCongelados, vistaQbert, explosion, gameoverGif, error,
     puntaje, mejorPuntaje, errorPuntaje, saltar, siguienteNivel, nuevaPartida,
   };
 }

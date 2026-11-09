@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { TAMANO_QBERT } from "./qbertDimensiones";
 
 type Animacion = "frente-quieto" | "frente-salto" | "espalda-quieto" | "espalda-salto" | "golpe";
 
@@ -26,10 +27,6 @@ const CUADROS: Record<Animacion, number> = {
 const FPS = { quieto: 8, salto: 24, golpe: 8 };
 /** El golpe repite sus 2 cuadros varias veces antes de volver a quieto. */
 const REPETICIONES_GOLPE = 3;
-
-const ANCHO = 44;
-const ALTO = 42;
-const ESCALA = 1.45;
 
 export type Fase = "quieto" | "salto" | "golpe";
 
@@ -79,8 +76,7 @@ export function QbertSprite({ tecla, inicial }: { tecla: string; inicial: Fase }
 
   const animacion = animacionDe(fase, lado);
 
-  const w = ANCHO * ESCALA;
-  const h = ALTO * ESCALA;
+  const { ancho: w, alto: h } = TAMANO_QBERT;
   return (
     <image
       href={ruta(animacion, cuadro % CUADROS[animacion])}

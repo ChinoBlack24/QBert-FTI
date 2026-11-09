@@ -13,7 +13,7 @@ const TECLAS: Record<string, Tecla> = { w: "w", a: "a", s: "s", d: "d" };
 
 export default function App() {
   const {
-    piramide, estado, ultimo, ultimoSalto, coloresCongelados, vistaQbert, error,
+    piramide, estado, ultimo, ultimoSalto, coloresCongelados, vistaQbert, explosion, gameoverGif, error,
     puntaje, mejorPuntaje, errorPuntaje, saltar, siguienteNivel, nuevaPartida,
   } = useJuego();
 
@@ -59,7 +59,8 @@ export default function App() {
       <section className="tablero">
         <h1>Q*bert con autómatas</h1>
         <Piramide datos={piramide} estado={estado} ultimo={ultimo} ultimoSalto={ultimoSalto}
-          coloresCongelados={coloresCongelados} vistaQbert={vistaQbert} />
+          coloresCongelados={coloresCongelados} vistaQbert={vistaQbert}
+          explosion={explosion} gameoverGif={gameoverGif} />
         {mensaje && <p className="mensaje">{mensaje}</p>}
       </section>
       <Panel estado={estado} ultimo={ultimo} />
