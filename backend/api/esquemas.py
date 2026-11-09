@@ -10,7 +10,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-NombreMaquina = Literal["mov", "cubo1", "cubo2", "cubo3", "vidas", "bola", "coily"]
+NombreMaquina = Literal["mov", "cubo1", "cubo2", "cubo3", "vidas", "bola"]
 
 
 class NuevaPartida(BaseModel):
@@ -84,9 +84,6 @@ class EstadoPartida(BaseModel):
     vidas: int
     estado_bola: str
     posicion_bola: int | None
-    estado_coily: str
-    fase_coily: Literal["fuera", "huevo", "persecucion"]
-    posicion_coily: int | None
     salida_mealy: list[str]
     nivel_completo: bool
     game_over: bool
@@ -103,11 +100,8 @@ class Paso(BaseModel):
     movimiento: Transicion
     cubo: PasoCubo | None
     choque: bool
-    choque_coily: bool
-    uso_plato: bool
     vidas: Transicion
     retiro_bola: Transicion | None
-    retiro_coily: Transicion | None
 
 
 class PasoTic(BaseModel):
@@ -115,7 +109,6 @@ class PasoTic(BaseModel):
     choque: bool
     vidas: Transicion | None
     retiro_bola: Transicion | None
-    retiro_coily: Transicion | None
 
 
 class ResultadoSalto(BaseModel):
@@ -125,20 +118,6 @@ class ResultadoSalto(BaseModel):
 
 class ResultadoTic(BaseModel):
     paso: PasoTic | None
-    estado: EstadoPartida
-
-
-class PasoTicCoily(BaseModel):
-    coily: Transicion
-    choque: bool
-    bono_caida: bool
-    vidas: Transicion | None
-    retiro_bola: Transicion | None
-    retiro_coily: Transicion | None
-
-
-class ResultadoTicCoily(BaseModel):
-    paso: PasoTicCoily | None
     estado: EstadoPartida
 
 

@@ -18,7 +18,6 @@ def partida():
 
 def test_partida_nueva(partida):
     assert partida["posicion"] == 0 and partida["vidas"] == 3
-    assert partida["fase_coily"] == "fuera" and partida["posicion_coily"] is None
     assert partida["colores"] == ["A"] * 28
     assert partida["colores_nivel"][-1] == {"estado": "q1", "color": "B", "objetivo": True}
 
@@ -39,26 +38,6 @@ def test_caida(partida):
     assert r["paso"]["cubo"] is None
     assert r["paso"]["vidas"]["e"] == CAIDA
     assert r["estado"]["vidas"] == 2
-
-
-@pytest.mark.parametrize(("cubo", "tecla"), [(10, "a"), (14, "w")])
-def test_uso_de_plato_en_api(partida, cubo, tecla):
-    from api.rutas import partidas
-    p = partidas[partida["id"]]
-    p.estado_mov = f"q{cubo}"
-    p.estado_bola = "b5"
-    p.estado_coily = "c8"
-
-    r = cliente.post(
-        f"/api/partidas/{partida['id']}/saltos", json={"tecla": tecla},
-    ).json()
-
-    assert r["paso"]["uso_plato"] is True
-    assert r["estado"]["posicion"] == 0
-    assert r["estado"]["vidas"] == 3
-    assert r["estado"]["posicion_bola"] is None
-    assert r["estado"]["fase_coily"] == "fuera"
-    assert r["paso"]["retiro_coily"]["e"] == "J"
 
 
 def test_game_over_devuelve_paso_null(partida):
@@ -94,7 +73,7 @@ def test_borrar(partida):
 
 def test_maquinas():
     nombres = [m["nombre"] for m in cliente.get("/api/maquinas").json()]
-    assert nombres == ["mov", "cubo1", "cubo2", "cubo3", "vidas", "bola", "coily"]
+    assert nombres == ["mov", "cubo1", "cubo2", "cubo3", "vidas", "bola"]
 
 
 def test_quintupla_mealy():
@@ -168,33 +147,3 @@ def test_quintupla_bola():
     m = cliente.get("/api/maquinas/bola").json()
     assert m["tipo"] == "Moore" and m["q0"] == "bF" and m["sigma_e"] == ["s", "d", "X"]
     assert m["g"]["bF"] == "F" and m["f"]["b27"] == {"s": "bF", "d": "bF", "X": "bF"}
-
-
-def test_tic_coily_hace_aparecer_el_huevo(partida):
-    base = f"/api/partidas/{partida['id']}"
-    r = cliente.post(f"{base}/tic-coily", json={"direccion": "s"}).json()
-    assert r["paso"]["coily"] == {
-        "q": "fuera", "e": "S", "q_nuevo": "h0", "s": "H0",
-    }
-    assert r["estado"]["fase_coily"] == "huevo"
-    assert r["estado"]["posicion_coily"] == 0
-
-
-def test_quintupla_coily():
-    m = cliente.get("/api/maquinas/coily").json()
-    assert m["tipo"] == "Mealy" and m["q0"] == "fuera"
-    assert m["f"]["fuera"]["S"] == "h0"
-    assert m["f"]["h15"]["S"] == "c21"
-    assert m["f"]["c1"]["s"] == "c3"
-
-
-def test_coily_caido_otorga_bono_y_retirada_de_enemigos(partida):
-    base = f"/api/partidas/{partida['id']}"
-    from api.rutas import partidas
-    partidas[partida["id"]].estado_coily = "c21"
-    partidas[partida["id"]].estado_mov = "q21"
-    r = cliente.post(f"{base}/tic-coily", json={"direccion": "s"}).json()
-    assert r["paso"]["coily"]["s"] == CAIDA
-    assert r["paso"]["bono_caida"] is True
-    assert r["estado"]["fase_coily"] == "fuera"
-    assert r["estado"]["posicion_bola"] is None
