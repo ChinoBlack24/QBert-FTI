@@ -22,7 +22,7 @@ tags:
   - name: partidas
     description: Una partida en curso (sección 4.5 del informe)
   - name: maquinas
-    description: Las máquinas por separado (4.2, 4.3, 4.4 y la bola)
+    description: Las máquinas por separado (movimiento, cubos, vidas, bola y Coily)
   - name: piramide
     description: Geometría para dibujar
 
@@ -39,7 +39,7 @@ paths:
             schema: { $ref: "#/components/schemas/NuevaPartida" }
       responses:
         "201":
-          description: Partida creada, en el estado inicial de las tres máquinas
+          description: Partida creada, en el estado inicial de las máquinas
           content:
             application/json:
               schema: { $ref: "#/components/schemas/EstadoPartida" }
@@ -75,9 +75,10 @@ paths:
       tags: [partidas]
       summary: Saltar (una entrada de la Mealy de movimiento)
       description: |
-        La tecla entra a la Mealy; su salida s actualiza el cubo s (lee p) y
-        la máquina de vidas, que lee h'(s, j) con j la salida de la bola
-        (X si se cayó o saltó al cubo de la bola). Si la partida ya terminó
+        La tecla entra a la Mealy; su salida s actualiza el cubo s (lee p).
+        Si Coily ya eclosionó, también lee esa tecla desde su propia posición.
+        La máquina de vidas lee X si Q*bert se cayó o chocó con un enemigo.
+        Si la partida ya terminó
         (game over o nivel completo), no se procesa y `paso` es null.
       operationId: saltar
       requestBody:
@@ -103,7 +104,7 @@ paths:
       description: |
         La bola lee s o d. Si no se manda `direccion`, el backend tira una
         moneda. Si la bola cae en el cubo de Q*bert, la máquina de vidas lee X
-        y la bola también (se retira a bF).
+        y se retiran ambos enemigos.
         El frontend lo llama con un temporizador. Si la partida ya terminó,
         no se procesa y `paso` es null.
       operationId: tic
@@ -137,6 +138,36 @@ paths:
               schema: { $ref: "#/components/schemas/EstadoPartida" }
         "404": { $ref: "#/components/responses/Error" }
         "409": { $ref: "#/components/responses/Error" }
+
+  /partidas/{id}/tic-coily:
+    parameters:
+      - $ref: "#/components/parameters/IdPartida"
+    post:
+      tags: [partidas]
+      summary: Avanza el huevo de Coily o lo hace aparecer
+      description: |
+        Si Coily está fuera, el tic lo hace aparecer en la cima como huevo.
+        Si el huevo está en la pirámide, baja una fila con dirección s o d.
+        Al llegar a la base eclosiona. En fase de persecución, Coily decide
+        su movimiento a partir de las posiciones de ambos personajes; si cae,
+        limpia a los enemigos y concede un bono de 50 puntos. Una colisión
+        consume una vida y retira a Coily y a la bola.
+        El juego decide aleatoriamente cuándo enviar este tic; s/d se usan
+        para elegir el movimiento del huevo.
+      operationId: ticCoily
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Tic" }
+      responses:
+        "200":
+          description: Transición de Coily y estado resultante
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ResultadoTicCoily" }
+        "404": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/ErrorValidacion" }
 
   /maquinas:
     get:
@@ -214,7 +245,7 @@ components:
       required: true
       schema:
         type: string
-        enum: [mov, cubo1, cubo2, cubo3, vidas, bola]
+        enum: [mov, cubo1, cubo2, cubo3, vidas, bola, coily]
 
   responses:
     Error:
@@ -351,6 +382,9 @@ components:
         - vidas
         - estado_bola
         - posicion_bola
+        - estado_coily
+        - fase_coily
+        - posicion_coily
         - salida_mealy
         - nivel_completo
         - game_over
@@ -380,6 +414,16 @@ components:
           anyOf:
             - type: integer
             - type: "null"
+        estado_coily: { type: string, description: "Estado actual de la Mealy de Coily" }
+        fase_coily:
+          type: string
+          enum: [fuera, huevo, persecucion]
+          description: Fase actual de Coily
+        posicion_coily:
+          description: Cubo donde está Coily, o null si está fuera
+          anyOf:
+            - type: integer
+            - type: "null"
         salida_mealy:
           type: array
           description: Palabra de salida de la Mealy en este nivel
@@ -400,18 +444,27 @@ components:
     Paso:
       type: object
       description: Lo que hizo cada máquina en un salto de Q*bert
-      required: [movimiento, cubo, choque, vidas, retiro_bola]
+      required: [movimiento, cubo, choque, choque_coily, uso_plato, vidas, retiro_bola, retiro_coily]
       properties:
         movimiento: { $ref: "#/components/schemas/Transicion" }
         cubo:
-          description: null si fue una caída (salida X)
+          description: null si no aterrizó en un cubo (caída o uso de plato)
           anyOf:
             - $ref: "#/components/schemas/PasoCubo"
             - type: "null"
         choque: { type: boolean, description: "true si saltó al cubo donde está la bola" }
+        choque_coily: { type: boolean, description: "true si Q*bert alcanzó a Coily" }
+        uso_plato:
+          type: boolean
+          description: true si Q*bert usó un plato desde el cubo 10 o 14 para volver a la cima
         vidas: { $ref: "#/components/schemas/Transicion" }
         retiro_bola:
-          description: La bola leyendo X (se retira) si se perdió una vida; si no, null
+          description: La bola leyendo X si se perdió una vida o se usó un plato; si no, null
+          anyOf:
+            - $ref: "#/components/schemas/Transicion"
+            - type: "null"
+        retiro_coily:
+          description: Coily se retira si se perdió una vida o Q*bert usó un plato; si no, null
           anyOf:
             - $ref: "#/components/schemas/Transicion"
             - type: "null"
@@ -419,7 +472,7 @@ components:
     PasoTic:
       type: object
       description: Lo que hizo cada máquina en un tic del reloj
-      required: [bola, choque, vidas, retiro_bola]
+      required: [bola, choque, vidas, retiro_bola, retiro_coily]
       properties:
         bola: { $ref: "#/components/schemas/Transicion" }
         choque: { type: boolean, description: "true si la bola cayó en el cubo de Q*bert" }
@@ -433,6 +486,11 @@ components:
           anyOf:
             - $ref: "#/components/schemas/Transicion"
             - type: "null"
+        retiro_coily:
+          description: Coily leyendo X si una colisión terminó la vida; si no, null
+          anyOf:
+            - $ref: "#/components/schemas/Transicion"
+            - type: "null"
 
     ResultadoTic:
       type: object
@@ -442,6 +500,38 @@ components:
           description: null si la partida ya había terminado
           anyOf:
             - $ref: "#/components/schemas/PasoTic"
+            - type: "null"
+        estado: { $ref: "#/components/schemas/EstadoPartida" }
+
+    PasoTicCoily:
+      type: object
+      description: Transición del huevo o movimiento de caza de Coily
+      required: [coily, choque, bono_caida, vidas, retiro_bola, retiro_coily]
+      properties:
+        coily: { $ref: "#/components/schemas/Transicion" }
+        choque: { type: boolean }
+        bono_caida: { type: boolean, description: "true si Coily cayó persiguiendo; concede 50 puntos" }
+        vidas:
+          anyOf:
+            - $ref: "#/components/schemas/Transicion"
+            - type: "null"
+        retiro_bola:
+          anyOf:
+            - $ref: "#/components/schemas/Transicion"
+            - type: "null"
+        retiro_coily:
+          anyOf:
+            - $ref: "#/components/schemas/Transicion"
+            - type: "null"
+
+    ResultadoTicCoily:
+      type: object
+      required: [paso, estado]
+      properties:
+        paso:
+          description: null si la partida terminó o Coily ya está persiguiendo
+          anyOf:
+            - $ref: "#/components/schemas/PasoTicCoily"
             - type: "null"
         estado: { $ref: "#/components/schemas/EstadoPartida" }
 

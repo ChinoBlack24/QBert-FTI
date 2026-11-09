@@ -2,31 +2,32 @@
 4.5 Integración de las máquinas.
 
 El sistema recibe dos tipos de evento, y cada uno va solo a la máquina que le
-corresponde:
+corresponde, más los tics independientes del huevo de Coily:
 
     tecla e ∈ {w, a, s, d}   (el jugador)  ->  la Mealy de movimiento lee e
     tic con moneda c ∈ {s, d} (el reloj)   ->  la Moore de la bola lee c
+    tic de Coily S/D                         ->  la Mealy de Coily lee S o D
+    tic de caza                              ->  Coily elige una dirección hacia Q*bert
 
-Cada máquina lee su propia palabra de entrada; las dos palabras llegan
-intercaladas en el tiempo.
+Cada máquina lee su propia palabra de entrada; los eventos llegan intercalados.
+Cuando Coily ya eclosionó, elige su propia tecla según las filas y columnas
+de ambos personajes.
 
 Con una tecla, la salida s de la Mealy se reparte así:
 
     s = i (0..27)  ->  el cubo i lee p
     s = X          ->  ningún cubo lee nada
-    la máquina de vidas lee h'(s, j), donde j = g_bola(b) es la salida de la bola:
+    la máquina de vidas lee X si s = X, si Q*bert salta a la bola o si
+    Q*bert y Coily terminan el evento en el mismo cubo; en otro caso lee p.
 
-        h'(s, j) = X   si s = X (se cayó) o s = j (saltó al cubo de la bola)
-        h'(s, j) = p   en otro caso
+Con un tic de la bola, su salida j se compara con el cubo donde está Q*bert.
+Con un tic de Coily, se mueve el huevo o aparece desde fuera; si eclosiona
+directamente en el cubo de Q*bert, la máquina de vidas lee X.
 
-Con un tic, la bola se mueve y su salida j se compara con el cubo donde está
-Q*bert (su estado q_i, porque la Mealy no produce salida si no salta). Si
-coinciden, la máquina de vidas lee X; si no, no lee nada.
+Cada vez que la máquina de vidas lee X (caída o choque), los enemigos activos
+también leen X y salen de la pirámide. Así no pueden quitar dos vidas seguidas.
 
-Cada vez que la máquina de vidas lee X (caída o choque), la bola también lee X
-y sale de la pirámide (bF). Así no puede quitar dos vidas seguidas.
-
-Como nunca se mueven los dos en el mismo evento, no pueden cruzarse sin chocar.
+La persecución usa una regla voraz fila/columna, no una búsqueda de ruta óptima.
 
 El nivel está completo cuando los 28 cubos están en su estado objetivo, es
 decir cuando la tupla de estados pertenece a F_0 x F_1 x ... x F_27: la
@@ -44,14 +45,16 @@ from typing import NamedTuple
 from automata.fa.dfa import DFA
 
 from .bola import FUERA, crear_bola
+from .coily import SALTO_DISCO, crear_coily
 from .cubo import NIVELES, crear_cubo
 from .mef import Transicion
 from .movimiento import CAIDA, CUBO_DEL_ESTADO, SIGMA_S_MOVIMIENTO, crear_movimiento
-from .piramide import CANTIDAD_CUBOS
+from .piramide import CANTIDAD_CUBOS, fila_columna
 from .vidas import crear_vidas
 
 # Lo que puede traer un tic del reloj. X no: la bola lo lee solo por la integración.
 DIRECCIONES_BOLA = ("s", "d")
+PLATOS = {10: "a", 14: "w"}
 
 
 # ===========================================================================
@@ -97,10 +100,13 @@ class PasoCubo(NamedTuple):
 class Paso:
     """Lo que hizo cada máquina en un salto de Q*bert (evento tecla)."""
     mov: Transicion           # Mealy de movimiento
-    cubo: PasoCubo | None     # None si fue una caída
+    cubo: PasoCubo | None     # None si no aterrizó en un cubo
     choque: bool              # saltó al cubo donde está la bola
-    vidas: Transicion         # Moore de vidas, leyendo h'(s, j)
+    choque_coily: bool
+    uso_plato: bool
+    vidas: Transicion         # Moore de vidas, leyendo p o X por caída/choque
     retiro_bola: Transicion | None  # la bola leyendo X, si se perdió una vida
+    retiro_coily: Transicion | None
 
     def lineas(self) -> list[str]:
         m, v = self.mov, self.vidas
@@ -110,10 +116,15 @@ class Paso:
             out.append(f"Cubo {c.cubo}: {c.q} --p--> {c.q_nuevo}/{c.color}")
         if self.choque:
             out.append(f"Choque: Q*bert saltó al cubo de la bola ({m.s})")
+        if self.choque_coily:
+            out.append("Choque: Q*bert alcanzó a Coily")
         out.append(f"Vidas:  {v.q} --{v.e}--> {v.q_nuevo}/{v.s}")
         if self.retiro_bola:
             b = self.retiro_bola
             out.append(f"Bola:   {b.q} --{b.e}--> {b.q_nuevo}/{b.s}")
+        if self.retiro_coily:
+            c = self.retiro_coily
+            out.append(f"Coily:  {c.q} --{c.e}--> {c.q_nuevo}/{c.s}")
         return out
 
     def __str__(self):
@@ -127,6 +138,7 @@ class PasoTic:
     choque: bool                # la bola cayó en el cubo de Q*bert
     vidas: Transicion | None    # Moore de vidas; solo lee (X) si hubo choque
     retiro_bola: Transicion | None  # la bola leyendo X, si hubo choque
+    retiro_coily: Transicion | None
 
     def lineas(self) -> list[str]:
         b = self.bola
@@ -139,16 +151,31 @@ class PasoTic:
         if self.retiro_bola:
             r = self.retiro_bola
             out.append(f"Bola:   {r.q} --{r.e}--> {r.q_nuevo}/{r.s}")
+        if self.retiro_coily:
+            c = self.retiro_coily
+            out.append(f"Coily:  {c.q} --{c.e}--> {c.q_nuevo}/{c.s}")
         return out
 
     def __str__(self):
         return "\n".join(self.lineas())
 
 
+@dataclass
+class PasoTicCoily:
+    """Un tic independiente de Coily: entrada del huevo o aparición desde fuera."""
+    coily: Transicion
+    choque: bool
+    bono_caida: bool
+    vidas: Transicion | None
+    retiro_bola: Transicion | None
+    retiro_coily: Transicion | None
+
+
 class Partida:
     def __init__(self, nivel: int = 1):
         self.movimiento = crear_movimiento()
         self.bola = crear_bola()
+        self.coily = crear_coily()
         self.vidas = crear_vidas()
         self.estado_vidas = self.vidas.q0
         self.empezar_nivel(nivel)
@@ -158,9 +185,10 @@ class Partida:
         self.nivel = nivel
         self.estado_mov = self.movimiento.q0
         self.estado_bola = self.bola.q0
+        self.estado_coily = self.coily.q0
         self.estados_cubos = [self.cubo.q0] * CANTIDAD_CUBOS
         self.salida_mealy = []  # palabra de salida de la Mealy en este nivel
-        self.ultimo_paso: Paso | PasoTic | None = None
+        self.ultimo_paso: Paso | PasoTic | PasoTicCoily | None = None
 
     # --- salidas que se muestran -------------------------------------------
     def color(self, i: int) -> str:
@@ -179,6 +207,18 @@ class Partida:
     def posicion_bola(self) -> int | None:
         j = self.salida_bola()
         return None if j == FUERA else int(j)
+
+    def fase_coily(self) -> str:
+        if self.estado_coily.startswith("h"):
+            return "huevo"
+        if self.estado_coily.startswith("c"):
+            return "persecucion"
+        return "fuera"
+
+    def posicion_coily(self) -> int | None:
+        if self.fase_coily() == "fuera":
+            return None
+        return int(self.estado_coily[1:])
 
     def cubos_en_objetivo(self) -> int:
         return sum(q in self.cubo.finales for q in self.estados_cubos)
@@ -204,6 +244,9 @@ class Partida:
         if self.terminada():
             return None
 
+        # Los saltos hacia afuera desde estos cubos conectan con los platos.
+        usa_plato = PLATOS.get(self.posicion()) == tecla
+
         # 1) Mealy de movimiento
         [mov] = self.movimiento.traza(tecla, self.estado_mov)
         self.estado_mov = mov.q_nuevo
@@ -217,15 +260,37 @@ class Partida:
             self.estados_cubos[i] = t.q_nuevo
             paso_cubo = PasoCubo(i, t.q, t.q_nuevo, t.s)
 
-        # 3) vidas: lee h'(s, j) con j la salida actual de la bola
+        # 3) Q*bert pierde si aterriza en Coily; la caída también lo retira.
+        coily_activo = self.fase_coily() != "fuera"
+        choque_coily = (
+            not usa_plato
+            and mov.s != CAIDA
+            and self.fase_coily() == "persecucion"
+            and self.posicion_coily() == self.posicion()
+        )
+
+        # 4) vidas: lee X por caída o choque con cualquiera de los enemigos.
         j = self.salida_bola()
-        [vid] = self.vidas.traza(entrada_vidas(mov.s, j), self.estado_vidas)
+        choque_bola = not usa_plato and mov.s == j
+        entrada = (
+            CAIDA
+            if (mov.s == CAIDA and not usa_plato) or choque_bola or choque_coily
+            else "p"
+        )
+        [vid] = self.vidas.traza(entrada, self.estado_vidas)
         self.estado_vidas = vid.q_nuevo
 
-        # 4) si se perdió una vida, la bola también lee X y se retira
-        retiro = self._retirar_bola() if vid.e == CAIDA else None
+        # 5) al perder una vida, ambos enemigos se retiran para evitar otro choque.
+        retiro = self._retirar_bola() if vid.e == CAIDA or usa_plato else None
+        retiro_coily = None
+        if usa_plato and coily_activo:
+            retiro_coily = self._transicionar_coily(SALTO_DISCO)
+        elif vid.e == CAIDA and coily_activo:
+            retiro_coily = self._retirar_coily()
 
-        self.ultimo_paso = Paso(mov, paso_cubo, mov.s == j, vid, retiro)
+        self.ultimo_paso = Paso(
+            mov, paso_cubo, choque_bola, choque_coily, usa_plato, vid, retiro, retiro_coily,
+        )
         return self.ultimo_paso
 
     # --- evento tic: se mueve la bola --------------------------------------
@@ -246,15 +311,73 @@ class Partida:
 
         # 2) choque: la salida de la bola es el cubo donde está Q*bert
         choque = bola.s == str(self.posicion())
-        vid = retiro = None
+        vid = retiro = retiro_coily = None
         if choque:
             # 3) vidas lee X y la bola también, y se retira
             [vid] = self.vidas.traza(CAIDA, self.estado_vidas)
             self.estado_vidas = vid.q_nuevo
             retiro = self._retirar_bola()
+            if self.fase_coily() != "fuera":
+                retiro_coily = self._retirar_coily()
 
-        self.ultimo_paso = PasoTic(bola, choque, vid, retiro)
+        self.ultimo_paso = PasoTic(bola, choque, vid, retiro, retiro_coily)
         return self.ultimo_paso
+
+    def tic_coily(self, direccion: str) -> PasoTicCoily | None:
+        """Aparece, baja el huevo o mueve a Coily un paso hacia Q*bert."""
+        if direccion not in DIRECCIONES_BOLA:
+            raise ValueError(f"la dirección de Coily tiene que ser s o d, no '{direccion}'")
+        if self.terminada():
+            return None
+
+        if self.fase_coily() == "persecucion":
+            movimiento = self._direccion_hacia_qbert()
+            coily = self._transicionar_coily(movimiento)
+            bono_caida = coily.s == CAIDA
+        else:
+            entrada = "S" if direccion == "s" else "D"
+            coily = self._transicionar_coily(entrada)
+            bono_caida = False
+
+        choque = (
+            self.fase_coily() == "persecucion"
+            and self.posicion_coily() == self.posicion()
+        )
+        vidas = retiro_bola = retiro_coily = None
+        if bono_caida:
+            retiro_bola = self._retirar_bola()
+        elif choque:
+            [vidas] = self.vidas.traza(CAIDA, self.estado_vidas)
+            self.estado_vidas = vidas.q_nuevo
+            retiro_bola = self._retirar_bola()
+            retiro_coily = self._retirar_coily()
+        paso = PasoTicCoily(coily, choque, bono_caida, vidas, retiro_bola, retiro_coily)
+        self.ultimo_paso = paso
+        return paso
+
+    def _direccion_hacia_qbert(self) -> str:
+        """Elige una dirección greedy: primero reduce diferencia de fila, luego columna."""
+        posicion_coily = self.posicion_coily()
+        if posicion_coily is None:
+            raise RuntimeError("Coily solo puede perseguir desde un cubo")
+        fila_coily, columna_coily = fila_columna(posicion_coily)
+        fila_qbert, columna_qbert = fila_columna(self.posicion())
+
+        if fila_qbert > fila_coily:
+            return "s" if columna_qbert <= columna_coily else "d"
+        if fila_qbert < fila_coily:
+            return "a" if columna_qbert < columna_coily else "w"
+        if columna_qbert < columna_coily:
+            return "a"
+        return "d"
+
+    def _transicionar_coily(self, entrada: str) -> Transicion:
+        [paso] = self.coily.traza(entrada, self.estado_coily)
+        self.estado_coily = paso.q_nuevo
+        return paso
+
+    def _retirar_coily(self) -> Transicion:
+        return self._transicionar_coily(CAIDA)
 
     def _retirar_bola(self) -> Transicion:
         [t] = self.bola.traza(CAIDA, self.estado_bola)

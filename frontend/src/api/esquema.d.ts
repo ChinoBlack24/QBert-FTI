@@ -54,9 +54,10 @@ export interface paths {
         put?: never;
         /**
          * Saltar (una entrada de la Mealy de movimiento)
-         * @description La tecla entra a la Mealy; su salida s actualiza el cubo s (lee p) y
-         *     la máquina de vidas, que lee h'(s, j) con j la salida de la bola
-         *     (X si se cayó o saltó al cubo de la bola). Si la partida ya terminó
+         * @description La tecla entra a la Mealy; su salida s actualiza el cubo s (lee p).
+         *     Si Coily ya eclosionó, también lee esa tecla desde su propia posición.
+         *     La máquina de vidas lee X si Q*bert se cayó o chocó con un enemigo.
+         *     Si la partida ya terminó
          *     (game over o nivel completo), no se procesa y `paso` es null.
          */
         post: operations["saltar"];
@@ -81,7 +82,7 @@ export interface paths {
          * Pasa el tiempo (una entrada de la Moore de la bola)
          * @description La bola lee s o d. Si no se manda `direccion`, el backend tira una
          *     moneda. Si la bola cae en el cubo de Q*bert, la máquina de vidas lee X
-         *     y la bola también (se retira a bF).
+         *     y se retiran ambos enemigos.
          *     El frontend lo llama con un temporizador. Si la partida ya terminó,
          *     no se procesa y `paso` es null.
          */
@@ -108,6 +109,35 @@ export interface paths {
          * @description Solo si el nivel actual está completo y no es el último. Las vidas se conservan.
          */
         post: operations["pasarDeNivel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/partidas/{id}/tic-coily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["IdPartida"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Avanza el huevo de Coily o lo hace aparecer
+         * @description Si Coily está fuera, el tic lo hace aparecer en la cima como huevo.
+         *     Si el huevo está en la pirámide, baja una fila con dirección s o d.
+         *     Al llegar a la base eclosiona. En fase de persecución, Coily decide
+         *     su movimiento a partir de las posiciones de ambos personajes; si cae,
+         *     limpia a los enemigos y concede un bono de 50 puntos. Una colisión
+         *     consume una vida y retira a Coily y a la bola.
+         *     El juego decide aleatoriamente cuándo enviar este tic; s/d se usan
+         *     para elegir el movimiento del huevo.
+         */
+        post: operations["ticCoily"];
         delete?: never;
         options?: never;
         head?: never;
@@ -294,6 +324,15 @@ export interface components {
             estado_bola: string;
             /** @description Cubo donde está la bola, o null si está fuera de la pirámide */
             posicion_bola: number | null;
+            /** @description Estado actual de la Mealy de Coily */
+            estado_coily: string;
+            /**
+             * @description Fase actual de Coily
+             * @enum {string}
+             */
+            fase_coily: "fuera" | "huevo" | "persecucion";
+            /** @description Cubo donde está Coily, o null si está fuera */
+            posicion_coily: number | null;
             /** @description Palabra de salida de la Mealy en este nivel */
             salida_mealy: string[];
             nivel_completo: boolean;
@@ -309,13 +348,19 @@ export interface components {
         /** @description Lo que hizo cada máquina en un salto de Q*bert */
         Paso: {
             movimiento: components["schemas"]["Transicion"];
-            /** @description null si fue una caída (salida X) */
+            /** @description null si no aterrizó en un cubo (caída o uso de plato) */
             cubo: components["schemas"]["PasoCubo"] | null;
             /** @description true si saltó al cubo donde está la bola */
             choque: boolean;
+            /** @description true si Q*bert alcanzó a Coily */
+            choque_coily: boolean;
+            /** @description true si Q*bert usó un plato desde el cubo 10 o 14 para volver a la cima */
+            uso_plato: boolean;
             vidas: components["schemas"]["Transicion"];
-            /** @description La bola leyendo X (se retira) si se perdió una vida; si no, null */
+            /** @description La bola leyendo X si se perdió una vida o se usó un plato; si no, null */
             retiro_bola: components["schemas"]["Transicion"] | null;
+            /** @description Coily se retira si se perdió una vida o Q*bert usó un plato; si no, null */
+            retiro_coily: components["schemas"]["Transicion"] | null;
         };
         /** @description Lo que hizo cada máquina en un tic del reloj */
         PasoTic: {
@@ -326,10 +371,27 @@ export interface components {
             vidas: components["schemas"]["Transicion"] | null;
             /** @description La bola leyendo X (se retira) si hubo choque; si no, null */
             retiro_bola: components["schemas"]["Transicion"] | null;
+            /** @description Coily leyendo X si una colisión terminó la vida; si no, null */
+            retiro_coily: components["schemas"]["Transicion"] | null;
         };
         ResultadoTic: {
             /** @description null si la partida ya había terminado */
             paso: components["schemas"]["PasoTic"] | null;
+            estado: components["schemas"]["EstadoPartida"];
+        };
+        /** @description Transición del huevo o movimiento de caza de Coily */
+        PasoTicCoily: {
+            coily: components["schemas"]["Transicion"];
+            choque: boolean;
+            /** @description true si Coily cayó persiguiendo; concede 50 puntos */
+            bono_caida: boolean;
+            vidas: components["schemas"]["Transicion"] | null;
+            retiro_bola: components["schemas"]["Transicion"] | null;
+            retiro_coily: components["schemas"]["Transicion"] | null;
+        };
+        ResultadoTicCoily: {
+            /** @description null si la partida terminó o Coily ya está persiguiendo */
+            paso: components["schemas"]["PasoTicCoily"] | null;
             estado: components["schemas"]["EstadoPartida"];
         };
         ResultadoSalto: {
@@ -375,7 +437,7 @@ export interface components {
     };
     parameters: {
         IdPartida: string;
-        NombreMaquina: "mov" | "cubo1" | "cubo2" | "cubo3" | "vidas" | "bola";
+        NombreMaquina: "mov" | "cubo1" | "cubo2" | "cubo3" | "vidas" | "bola" | "coily";
     };
     requestBodies: never;
     headers: never;
@@ -396,7 +458,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Partida creada, en el estado inicial de las tres máquinas */
+            /** @description Partida creada, en el estado inicial de las máquinas */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -531,6 +593,34 @@ export interface operations {
             };
             404: components["responses"]["Error"];
             409: components["responses"]["Error"];
+        };
+    };
+    ticCoily: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["IdPartida"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["Tic"];
+            };
+        };
+        responses: {
+            /** @description Transición de Coily y estado resultante */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultadoTicCoily"];
+                };
+            };
+            404: components["responses"]["Error"];
+            422: components["responses"]["ErrorValidacion"];
         };
     };
     listarMaquinas: {

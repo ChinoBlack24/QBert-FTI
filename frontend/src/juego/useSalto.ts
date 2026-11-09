@@ -21,10 +21,17 @@ export interface OpcionesSalto {
   maximo: number;     // distancia a partir de la cual se teletransporta
 }
 
-export function useSalto(x: number, y: number, { duracion, altura, maximo }: OpcionesSalto) {
-  const [pos, setPos] = useState({ x, y });
+export function useSalto(
+  x: number,
+  y: number,
+  { duracion, altura, maximo }: OpcionesSalto,
+  inicio?: { x: number; y: number },
+) {
+  const inicioX = inicio?.x ?? x;
+  const inicioY = inicio?.y ?? y;
+  const [pos, setPos] = useState({ x: inicioX, y: inicioY });
   // Dónde está dibujado ahora: si llega un salto nuevo a mitad de otro, arranca desde acá.
-  const actual = useRef({ x, y });
+  const actual = useRef({ x: inicioX, y: inicioY });
 
   useEffect(() => {
     const desde = actual.current;
@@ -51,7 +58,7 @@ export function useSalto(x: number, y: number, { duracion, altura, maximo }: Opc
     };
     cuadro = requestAnimationFrame(avanzar);
     return () => cancelAnimationFrame(cuadro);
-  }, [x, y, duracion, altura, maximo]);
+  }, [x, y, duracion, altura, maximo, inicioX, inicioY]);
 
   return pos;
 }

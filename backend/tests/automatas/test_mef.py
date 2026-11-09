@@ -2,10 +2,13 @@
 
 import pytest
 
-from automatas import NIVELES, Mealy, Moore, crear_cubo, crear_movimiento, crear_vidas
+from automatas import (NIVELES, Mealy, Moore, crear_coily, crear_cubo, crear_movimiento,
+                       crear_vidas)
 from automatas.mef import leer_tabla_mealy, leer_tabla_moore
 
-MAQUINAS = [crear_movimiento, crear_vidas] + [lambda n=n: crear_cubo(n) for n in NIVELES]
+MAQUINAS = [crear_movimiento, crear_vidas, crear_coily] + [
+    lambda n=n: crear_cubo(n) for n in NIVELES
+]
 
 
 @pytest.mark.parametrize("crear", MAQUINAS)

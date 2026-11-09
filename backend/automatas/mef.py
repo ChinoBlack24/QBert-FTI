@@ -132,7 +132,8 @@ class Mealy(MEF):
     def tabla(self):
         filas = [["Q"] + self.simbolos]
         for q in self.orden:
-            filas.append([self._marca(q)] +
+            fin = FINAL if q in self.finales else ""
+            filas.append([f"{self._marca(q)}{fin}"] +
                          [f"{self.f.transitions[q][e]}/{self.g[q][e]}" for e in self.simbolos])
         return _formatear(filas)
 
