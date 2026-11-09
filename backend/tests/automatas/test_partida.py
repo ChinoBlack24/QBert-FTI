@@ -46,6 +46,31 @@ def test_caida_no_pinta_y_resta_vida():
     assert all(p.color(i) == "A" for i in range(CANTIDAD_CUBOS))
 
 
+@pytest.mark.parametrize(("cubo", "tecla"), [(10, "a"), (14, "w")])
+def test_plato_desde_los_cubos_exteriores_devuelve_a_la_cima_y_limpia_enemigos(cubo, tecla):
+    p = Partida()
+    p.estado_mov = f"q{cubo}"
+    p.estado_bola = "b5"
+    p.estado_coily = "c8"
+
+    paso = p.saltar(tecla)
+
+    assert paso.uso_plato
+    assert paso.mov.s == CAIDA  # el salto hacia afuera es interceptado por el plato
+    assert p.posicion() == 0
+    assert p.cantidad_vidas() == 3
+    assert paso.retiro_bola == ("b5", CAIDA, "bF", "F")
+    assert paso.retiro_coily == ("c8", "J", "fuera", "N")
+
+
+def test_platos_siguen_disponibles_despues_de_usarlos():
+    p = Partida()
+    p.estado_mov = "q10"
+    assert p.saltar("a").uso_plato
+    p.estado_mov = "q14"
+    assert p.saltar("w").uso_plato
+
+
 def test_tres_caidas_es_game_over_y_no_acepta_mas_saltos():
     p = Partida()
     p.jugar("www")

@@ -103,6 +103,12 @@ fila y luego la columna. Si su movimiento lo saca de la pirámide, despeja a la 
 suma 50 puntos. Se representa provisionalmente con formas SVG básicas, sin archivos de
 sprite.
 
+Hay platos voladores reutilizables junto a los cubos 10 y 14. Desde el cubo 10, pulsa
+A para saltar hacia afuera y volver a la cima; desde el 14, usa W. Los platos están
+elevados y más separados de los cubos. El viaje animado hasta la cima dura 2 segundos;
+durante ese tiempo se pausan los enemigos y los controles. El plato evita la pérdida
+de vida y despeja a la bola y a Coily.
+
 Los sprites están en `public/sprites/` (créditos en `public/sprites/CREDITOS.md`).
 
 Pendiente: paneles con las máquinas completas (tabla/diagrama con el estado actual resaltado).

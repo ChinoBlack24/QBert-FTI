@@ -14,7 +14,7 @@ const moore = (nombre: string, t: Transicion): Linea =>
 
 function lineasEvento(ev: Evento): Linea[] {
   if (ev.tipo === "salto") {
-    const { movimiento: m, cubo: c, choque, choque_coily, vidas, retiro_bola,
+    const { movimiento: m, cubo: c, choque, choque_coily, uso_plato, vidas, retiro_bola,
       retiro_coily } = ev.paso;
     return [
       { texto: `Mealy:  f(${m.q}, ${m.e}) = ${m.q_nuevo}` },
@@ -22,6 +22,7 @@ function lineasEvento(ev: Evento): Linea[] {
       ...(c ? [{ texto: `Cubo ${c.cubo}: ${c.q} --p--> ${c.q_nuevo}/${c.color}` }] : []),
       ...(choque ? [{ texto: `¡Choque! Saltó sobre la bola`, choque: true }] : []),
       ...(choque_coily ? [{ texto: "¡Choque con Coily!", choque: true }] : []),
+      ...(uso_plato ? [{ texto: "¡Plato volador! Q*bert vuelve a la cima y despeja los enemigos" }] : []),
       moore("Vidas: ", vidas),
       ...(retiro_bola ? [moore("Bola:  ", retiro_bola)] : []),
       ...(retiro_coily ? [moore("Coily:", retiro_coily)] : []),
@@ -101,6 +102,7 @@ export function Panel({ estado, ultimo }: { estado: EstadoPartida; ultimo: Event
       <p className="tenue ayuda">
         W arriba-der · A arriba-izq<br />
         S abajo-izq · D abajo-der<br />
+        Desde el cubo 10, A usa el plato izquierdo; desde el 14, W usa el derecho.<br />
         ENTER siguiente nivel · R reiniciar<br />
         La bola y el huevo aparecen con esperas aleatorias.<br />
         El huevo baja hasta la base; Coily decide su ruta hacia Q*bert.<br />

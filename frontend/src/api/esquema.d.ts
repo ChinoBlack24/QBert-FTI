@@ -348,16 +348,18 @@ export interface components {
         /** @description Lo que hizo cada máquina en un salto de Q*bert */
         Paso: {
             movimiento: components["schemas"]["Transicion"];
-            /** @description null si fue una caída (salida X) */
+            /** @description null si no aterrizó en un cubo (caída o uso de plato) */
             cubo: components["schemas"]["PasoCubo"] | null;
             /** @description true si saltó al cubo donde está la bola */
             choque: boolean;
             /** @description true si Q*bert alcanzó a Coily */
             choque_coily: boolean;
+            /** @description true si Q*bert usó un plato desde el cubo 10 o 14 para volver a la cima */
+            uso_plato: boolean;
             vidas: components["schemas"]["Transicion"];
-            /** @description La bola leyendo X (se retira) si se perdió una vida; si no, null */
+            /** @description La bola leyendo X si se perdió una vida o se usó un plato; si no, null */
             retiro_bola: components["schemas"]["Transicion"] | null;
-            /** @description Coily leyendo X al perderse una vida; si no, null */
+            /** @description Coily se retira si se perdió una vida o Q*bert usó un plato; si no, null */
             retiro_coily: components["schemas"]["Transicion"] | null;
         };
         /** @description Lo que hizo cada máquina en un tic del reloj */

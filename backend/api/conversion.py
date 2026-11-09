@@ -51,6 +51,7 @@ def paso(p: automatas.Paso) -> Paso:
         cubo=PasoCubo(**p.cubo._asdict()) if p.cubo else None,
         choque=p.choque,
         choque_coily=p.choque_coily,
+        uso_plato=p.uso_plato,
         vidas=transicion(p.vidas),
         retiro_bola=transicion(p.retiro_bola) if p.retiro_bola else None,
         retiro_coily=transicion(p.retiro_coily) if p.retiro_coily else None,

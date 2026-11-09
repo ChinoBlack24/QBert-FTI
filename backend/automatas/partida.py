@@ -45,7 +45,7 @@ from typing import NamedTuple
 from automata.fa.dfa import DFA
 
 from .bola import FUERA, crear_bola
-from .coily import crear_coily
+from .coily import SALTO_DISCO, crear_coily
 from .cubo import NIVELES, crear_cubo
 from .mef import Transicion
 from .movimiento import CAIDA, CUBO_DEL_ESTADO, SIGMA_S_MOVIMIENTO, crear_movimiento
@@ -54,6 +54,7 @@ from .vidas import crear_vidas
 
 # Lo que puede traer un tic del reloj. X no: la bola lo lee solo por la integración.
 DIRECCIONES_BOLA = ("s", "d")
+PLATOS = {10: "a", 14: "w"}
 
 
 # ===========================================================================
@@ -99,9 +100,10 @@ class PasoCubo(NamedTuple):
 class Paso:
     """Lo que hizo cada máquina en un salto de Q*bert (evento tecla)."""
     mov: Transicion           # Mealy de movimiento
-    cubo: PasoCubo | None     # None si fue una caída
+    cubo: PasoCubo | None     # None si no aterrizó en un cubo
     choque: bool              # saltó al cubo donde está la bola
     choque_coily: bool
+    uso_plato: bool
     vidas: Transicion         # Moore de vidas, leyendo p o X por caída/choque
     retiro_bola: Transicion | None  # la bola leyendo X, si se perdió una vida
     retiro_coily: Transicion | None
@@ -242,6 +244,9 @@ class Partida:
         if self.terminada():
             return None
 
+        # Los saltos hacia afuera desde estos cubos conectan con los platos.
+        usa_plato = PLATOS.get(self.posicion()) == tecla
+
         # 1) Mealy de movimiento
         [mov] = self.movimiento.traza(tecla, self.estado_mov)
         self.estado_mov = mov.q_nuevo
@@ -258,28 +263,33 @@ class Partida:
         # 3) Q*bert pierde si aterriza en Coily; la caída también lo retira.
         coily_activo = self.fase_coily() != "fuera"
         choque_coily = (
-            mov.s != CAIDA
+            not usa_plato
+            and mov.s != CAIDA
             and self.fase_coily() == "persecucion"
             and self.posicion_coily() == self.posicion()
         )
 
         # 4) vidas: lee X por caída o choque con cualquiera de los enemigos.
         j = self.salida_bola()
-        choque_bola = mov.s == j
-        entrada = CAIDA if mov.s == CAIDA or choque_bola or choque_coily else "p"
+        choque_bola = not usa_plato and mov.s == j
+        entrada = (
+            CAIDA
+            if (mov.s == CAIDA and not usa_plato) or choque_bola or choque_coily
+            else "p"
+        )
         [vid] = self.vidas.traza(entrada, self.estado_vidas)
         self.estado_vidas = vid.q_nuevo
 
         # 5) al perder una vida, ambos enemigos se retiran para evitar otro choque.
-        retiro = self._retirar_bola() if vid.e == CAIDA else None
-        retiro_coily = (
-            self._retirar_coily()
-            if vid.e == CAIDA and coily_activo
-            else None
-        )
+        retiro = self._retirar_bola() if vid.e == CAIDA or usa_plato else None
+        retiro_coily = None
+        if usa_plato and coily_activo:
+            retiro_coily = self._transicionar_coily(SALTO_DISCO)
+        elif vid.e == CAIDA and coily_activo:
+            retiro_coily = self._retirar_coily()
 
         self.ultimo_paso = Paso(
-            mov, paso_cubo, choque_bola, choque_coily, vid, retiro, retiro_coily,
+            mov, paso_cubo, choque_bola, choque_coily, usa_plato, vid, retiro, retiro_coily,
         )
         return self.ultimo_paso
 

@@ -37,6 +37,8 @@ export const MS_POR_TIC = 800;
 export const MS_REAPARECER = { min: 1500, max: 4000 };
 /** Cuánto dura un salto de Q*bert: el tiempo entre apretar la tecla y aterrizar. */
 export const MS_SALTO = 500;
+/** Duración de la animación en que el plato arrastra a Q*bert hasta la cima. */
+export const MS_SUBIDA_PLATO = 2000;
 /** Coily espera dos duraciones de salto de Q*bert entre movimientos de caza. */
 export const MS_POR_TIC_COILY = MS_SALTO * 2;
 /** Cuánto tarda Q*bert en volver a la cima después de caerse. */
@@ -48,6 +50,7 @@ export const MS_ESPERA_CHOQUE = 1000;
 export type VistaQbert =
   | { tipo: "normal" }                                   // en estado.posicion
   | { tipo: "cayendo"; desde: number; tecla: Tecla }     // saltó fuera de la pirámide
+  | { tipo: "plato"; desde: number }                    // viaja desde un plato hasta la cima
   | { tipo: "oculto" };                                  // esperando para reaparecer
 
 export type Evento =
@@ -209,7 +212,15 @@ export function useJuego() {
         sumarPuntos(100);
       }
 
-      if (paso.movimiento.s === "X") {
+      if (paso.uso_plato) {
+        bloquear(MS_SUBIDA_PLATO);
+        pausar(MS_SUBIDA_PLATO);
+        setVistaQbert({ tipo: "plato", desde: antes.posicion });
+        despues(MS_SUBIDA_PLATO, () => {
+          setColoresCongelados(null);
+          setVistaQbert({ tipo: "normal" });
+        });
+      } else if (paso.movimiento.s === "X") {
         // Se cayó: salta fuera, desaparece y vuelve a la cima a los MS_REAPARICION.
         bloquear(MS_SALTO + MS_REAPARICION);
         pausar(MS_SALTO + MS_REAPARICION);

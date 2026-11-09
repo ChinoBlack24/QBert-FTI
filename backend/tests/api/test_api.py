@@ -41,6 +41,26 @@ def test_caida(partida):
     assert r["estado"]["vidas"] == 2
 
 
+@pytest.mark.parametrize(("cubo", "tecla"), [(10, "a"), (14, "w")])
+def test_uso_de_plato_en_api(partida, cubo, tecla):
+    from api.rutas import partidas
+    p = partidas[partida["id"]]
+    p.estado_mov = f"q{cubo}"
+    p.estado_bola = "b5"
+    p.estado_coily = "c8"
+
+    r = cliente.post(
+        f"/api/partidas/{partida['id']}/saltos", json={"tecla": tecla},
+    ).json()
+
+    assert r["paso"]["uso_plato"] is True
+    assert r["estado"]["posicion"] == 0
+    assert r["estado"]["vidas"] == 3
+    assert r["estado"]["posicion_bola"] is None
+    assert r["estado"]["fase_coily"] == "fuera"
+    assert r["paso"]["retiro_coily"]["e"] == "J"
+
+
 def test_game_over_devuelve_paso_null(partida):
     url = f"/api/partidas/{partida['id']}/saltos"
     for _ in range(3):

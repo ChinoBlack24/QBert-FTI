@@ -80,6 +80,10 @@ los dos en el mismo evento, no pueden cruzarse sin chocar.
 Cada vez que la máquina de vidas lee `X` (choque o caída), la bola también lee `X` y
 sale de la pirámide (`bF`). Así no puede quitar dos vidas seguidas.
 
+Desde los cubos exteriores 10 y 14, los saltos hacia afuera (`a` desde 10 y `w`
+desde 14) usan platos voladores reutilizables para volver a la cima sin perder una
+vida. Al usarlos, la bola lee `X` y Coily lee `J`; ambos se retiran.
+
 ## Coily y sus autómatas
 
 Coily usa una Mealy con tres fases codificadas en sus estados:
@@ -100,9 +104,8 @@ Coily usa una Mealy con tres fases codificadas en sus estados:
 
 La Mealy devuelve `H<i>` mientras el huevo está en el cubo `i`, `C<i>` mientras
 Coily está en el cubo `i`, `X` si cae y `N` si está fuera. `X` (caída de Q*bert) y
-`J` (futuro salto al disco) despejan a Coily. Una colisión con Coily hace que la
-máquina de vidas lea `X` y retira también a la bola. El disco todavía no tiene una
-acción jugable; `J` queda definido como entrada del autómata para conectarlo después.
+`J` (Q*bert usa un plato) despejan a Coily. Una colisión con Coily hace que la
+máquina de vidas lea `X` y retira también a la bola.
 
 Para inspeccionar toda la tabla, abrir `GET /api/maquinas/coily` o traducir una
 palabra corta de entradas en `POST /api/maquinas/coily/traducir`. En la tabla,

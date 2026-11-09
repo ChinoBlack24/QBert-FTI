@@ -104,6 +104,7 @@ class Paso(BaseModel):
     cubo: PasoCubo | None
     choque: bool
     choque_coily: bool
+    uso_plato: bool
     vidas: Transicion
     retiro_bola: Transicion | None
     retiro_coily: Transicion | None

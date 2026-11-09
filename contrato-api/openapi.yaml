@@ -444,24 +444,27 @@ components:
     Paso:
       type: object
       description: Lo que hizo cada máquina en un salto de Q*bert
-      required: [movimiento, cubo, choque, choque_coily, vidas, retiro_bola, retiro_coily]
+      required: [movimiento, cubo, choque, choque_coily, uso_plato, vidas, retiro_bola, retiro_coily]
       properties:
         movimiento: { $ref: "#/components/schemas/Transicion" }
         cubo:
-          description: null si fue una caída (salida X)
+          description: null si no aterrizó en un cubo (caída o uso de plato)
           anyOf:
             - $ref: "#/components/schemas/PasoCubo"
             - type: "null"
         choque: { type: boolean, description: "true si saltó al cubo donde está la bola" }
         choque_coily: { type: boolean, description: "true si Q*bert alcanzó a Coily" }
+        uso_plato:
+          type: boolean
+          description: true si Q*bert usó un plato desde el cubo 10 o 14 para volver a la cima
         vidas: { $ref: "#/components/schemas/Transicion" }
         retiro_bola:
-          description: La bola leyendo X (se retira) si se perdió una vida; si no, null
+          description: La bola leyendo X si se perdió una vida o se usó un plato; si no, null
           anyOf:
             - $ref: "#/components/schemas/Transicion"
             - type: "null"
         retiro_coily:
-          description: Coily leyendo X al perderse una vida; si no, null
+          description: Coily se retira si se perdió una vida o Q*bert usó un plato; si no, null
           anyOf:
             - $ref: "#/components/schemas/Transicion"
             - type: "null"
