@@ -8,6 +8,7 @@ import type { EstadoPartida, Paso, Piramide as DatosPiramide } from "../api/clie
 import { BolaSprite } from "./BolaSprite";
 import { COLORES } from "./colores";
 import { type Fase, QbertSprite } from "./QbertSprite";
+import { TAMANO_QBERT } from "./qbertDimensiones";
 import { useSalto } from "./useSalto";
 import { MS_SALTO, type Evento, type VistaQbert } from "./useJuego";
 
@@ -53,9 +54,9 @@ function faseInicial(ultimo: Evento | null): Fase {
   return ultimo.tipo === "salto" ? "salto" : "quieto";
 }
 
-function Qbert({ x, y, cayendo, ultimo, ultimoSalto, clave }: {
+function Qbert({ x, y, cayendo, ultimo, ultimoSalto, clave, explosion }: {
   x: number; y: number; cayendo: boolean; ultimo: Evento | null; ultimoSalto: Paso | null;
-  clave: string;
+  clave: string; explosion: { id: number; src: string } | null;
 }) {
   const pos = useSalto(x, y, cayendo ? CAIDA_QBERT : SALTO_QBERT);
   return (
@@ -66,6 +67,18 @@ function Qbert({ x, y, cayendo, ultimo, ultimoSalto, clave }: {
     <g className="qbert" transform={`translate(${pos.x}, ${pos.y})`}
       style={cayendo ? { opacity: 0, transition: `opacity ${MS_SALTO}ms ease-in` } : undefined}>
       <QbertSprite key={clave} tecla={ultimoSalto?.movimiento.e ?? "d"} inicial={faseInicial(ultimo)} />
+      {explosion && (
+        <image
+          key={explosion.id}
+          href={explosion.src}
+          x={-TAMANO_QBERT.ancho / 2}
+          y={-TAMANO_QBERT.alto + 10}
+          width={TAMANO_QBERT.ancho}
+          height={TAMANO_QBERT.alto}
+          className="sprite explosion"
+          pointerEvents="none"
+        />
+      )}
     </g>
   );
 }
@@ -81,9 +94,11 @@ function Bola({ x, y, cubo }: { x: number; y: number; cubo: number }) {
   );
 }
 
-export function Piramide({ datos, estado, ultimo, ultimoSalto, coloresCongelados, vistaQbert }: {
+export function Piramide({ datos, estado, ultimo, ultimoSalto, coloresCongelados, vistaQbert, explosion, gameoverGif }: {
   datos: DatosPiramide; estado: EstadoPartida; ultimo: Evento | null; ultimoSalto: Paso | null;
   coloresCongelados: string[] | null; vistaQbert: VistaQbert;
+  explosion: { id: number; src: string } | null;
+  gameoverGif: { src: string; duracionMs: number } | null;
 }) {
   const cubos = datos.cubos.map((c) => ({ ...c, ...centro(c.fila, c.columna) }));
   const colores = coloresCongelados ?? estado.colores;
@@ -102,17 +117,20 @@ export function Piramide({ datos, estado, ultimo, ultimoSalto, coloresCongelados
   const alto = (datos.filas - 1) * (MEDIO + ALTO_CARA) + CUARTO + ALTO_CARA;
 
   return (
-    <svg className="piramide" viewBox={`${-ancho / 2} ${-CUARTO - 40} ${ancho} ${alto + CUARTO + 50}`}>
-      {cubos.map((c) => (
-        <Cubo key={c.numero} x={c.x} y={c.y} color={COLORES[colores[c.numero]] ?? "#888"} />
-      ))}
-      {bola && <Bola x={bola.x} y={bola.y} cubo={bola.numero} />}
-      {/* Oculto mientras espera para reaparecer: al volver se monta de nuevo en la cima. */}
-      {!estado.game_over && vistaQbert.tipo !== "oculto" && (
-        <Qbert x={qbert.x} y={qbert.y} cayendo={vistaQbert.tipo === "cayendo"}
-          ultimo={ultimo} ultimoSalto={ultimoSalto}
-          clave={`${estado.salida_mealy.length}-${estado.vidas}`} />
-      )}
-    </svg>
+    <>
+      <svg className="piramide" viewBox={`${-ancho / 2} ${-CUARTO - 40} ${ancho} ${alto + CUARTO + 50}`}>
+        {cubos.map((c) => (
+          <Cubo key={c.numero} x={c.x} y={c.y} color={COLORES[colores[c.numero]] ?? "#888"} />
+        ))}
+        {bola && <Bola x={bola.x} y={bola.y} cubo={bola.numero} />}
+        {/* Oculto mientras espera para reaparecer: al volver se monta de nuevo en la cima. */}
+        {(!estado.game_over || explosion !== null) && vistaQbert.tipo !== "oculto" && (
+          <Qbert x={qbert.x} y={qbert.y} cayendo={vistaQbert.tipo === "cayendo"}
+            ultimo={ultimo} ultimoSalto={ultimoSalto}
+            clave={`${estado.salida_mealy.length}-${estado.vidas}`} explosion={explosion} />
+        )}
+      </svg>
+      {gameoverGif && <img className="gameover-overlay" src={gameoverGif.src} alt="Game over" />}
+    </>
   );
 }

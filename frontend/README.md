@@ -96,5 +96,15 @@ cuando está fuera, antes de que vuelva a aparecer. Arranca con el primer salto 
 nivel. Es solo el ritmo: dónde va la bola y qué pasa al chocar lo decide el backend.
 
 Los sprites están en `public/sprites/` (créditos en `public/sprites/CREDITOS.md`).
+Cuando un enemigo choca con Q*bert, se superpone durante 0,5 segundos un GIF elegido
+al azar entre todos los archivos `colision*.gif` de `public/assets/`. Los saltos hacia
+arriba/abajo reproducen al azar entre todos los MP3 `arriba*.mp3` y `abajo*.mp3`;
+al chocar se elige entre todos los `colision*.mp3`, y al caerse entre todos los
+`caida*.mp3`, dentro de `public/audios/`. Vite genera el catálogo automáticamente,
+también al agregar o quitar archivos mientras `npm run dev` está activo.
+Al entrar en GAME OVER se elige un GIF aleatorio entre `gameover*.gif` de
+`public/assets/` y un audio aleatorio entre `gameover*.mp3` de `public/audios/`;
+ambos se disparan una sola vez. El GIF cubre toda la pantalla durante un ciclo y
+luego desaparece.
 
 Pendiente: paneles con las máquinas completas (tabla/diagrama con el estado actual resaltado).

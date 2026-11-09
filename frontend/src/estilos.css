@@ -114,6 +114,20 @@ h3 {
   image-rendering: pixelated;
 }
 
+.explosion {
+  pointer-events: none;
+}
+
+.gameover-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  pointer-events: none;
+}
+
 
 .choque {
   color: var(--bola);
