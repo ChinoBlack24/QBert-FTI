@@ -14,40 +14,22 @@ const moore = (nombre: string, t: Transicion): Linea =>
 
 function lineasEvento(ev: Evento): Linea[] {
   if (ev.tipo === "salto") {
-    const { movimiento: m, cubo: c, choque, choque_coily, uso_plato, vidas, retiro_bola,
-      retiro_coily } = ev.paso;
+    const { movimiento: m, cubo: c, choque, vidas, retiro_bola } = ev.paso;
     return [
       { texto: `Mealy:  f(${m.q}, ${m.e}) = ${m.q_nuevo}` },
       { texto: `        g(${m.q}, ${m.e}) = ${m.s}` },
       ...(c ? [{ texto: `Cubo ${c.cubo}: ${c.q} --p--> ${c.q_nuevo}/${c.color}` }] : []),
       ...(choque ? [{ texto: `¡Choque! Saltó sobre la bola`, choque: true }] : []),
-      ...(choque_coily ? [{ texto: "¡Choque con Coily!", choque: true }] : []),
-      ...(uso_plato ? [{ texto: "¡Plato volador! Q*bert vuelve a la cima y despeja los enemigos" }] : []),
       moore("Vidas: ", vidas),
       ...(retiro_bola ? [moore("Bola:  ", retiro_bola)] : []),
-      ...(retiro_coily ? [moore("Coily:", retiro_coily)] : []),
     ];
   }
-  if (ev.tipo === "tic") {
-    const { bola, choque, vidas, retiro_bola, retiro_coily } = ev.paso;
-    return [
-      moore("Bola:  ", bola),
-      ...(choque ? [{ texto: "¡Choque! La bola cayó sobre Q*bert", choque: true }] : []),
-      ...(vidas ? [moore("Vidas: ", vidas)] : []),
-      ...(retiro_bola ? [moore("Bola:  ", retiro_bola)] : []),
-      ...(retiro_coily ? [moore("Coily:", retiro_coily)] : []),
-    ];
-  }
-  const { coily, choque, vidas, retiro_bola, retiro_coily } = ev.paso;
+  const { bola, choque, vidas, retiro_bola } = ev.paso;
   return [
-    moore("Coily:", coily),
-    ...(choque ? [{ texto: "¡El huevo eclosionó sobre Q*bert!", choque: true }] : []),
-    ...(ev.paso.bono_caida
-      ? [{ texto: "¡Coily cayó al perseguir! +50 puntos y enemigos despejados", choque: true }]
-      : []),
+    moore("Bola:  ", bola),
+    ...(choque ? [{ texto: `¡Choque! La bola cayó sobre Q*bert`, choque: true }] : []),
     ...(vidas ? [moore("Vidas: ", vidas)] : []),
     ...(retiro_bola ? [moore("Bola:  ", retiro_bola)] : []),
-    ...(retiro_coily ? [moore("Coily:", retiro_coily)] : []),
   ];
 }
 
@@ -68,11 +50,6 @@ export function Panel({ estado, ultimo }: { estado: EstadoPartida; ultimo: Event
         <dd>
           {estado.estado_bola}
           {estado.posicion_bola === null && <span className="tenue"> (fuera)</span>}
-        </dd>
-        <dt>Coily en</dt>
-        <dd>
-          {estado.estado_coily} <span className="tenue">({estado.fase_coily})</span>
-          {estado.posicion_coily !== null && ` · cubo ${estado.posicion_coily}`}
         </dd>
       </dl>
 
@@ -102,11 +79,8 @@ export function Panel({ estado, ultimo }: { estado: EstadoPartida; ultimo: Event
       <p className="tenue ayuda">
         W arriba-der · A arriba-izq<br />
         S abajo-izq · D abajo-der<br />
-        Desde el cubo 10, A usa el plato izquierdo; desde el 14, W usa el derecho.<br />
         ENTER siguiente nivel · R reiniciar<br />
-        La bola y el huevo aparecen con esperas aleatorias.<br />
-        El huevo baja hasta la base; Coily decide su ruta hacia Q*bert.<br />
-        Si cae persiguiéndote, despeja enemigos y suma 50 puntos.
+        La bola empieza a caer con tu primer salto.
       </p>
     </aside>
   );

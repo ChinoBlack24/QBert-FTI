@@ -9,7 +9,7 @@ import automatas
 from automatas import MEF, Mealy, Partida
 
 from .esquemas import (ColorNivel, EstadoPartida, Maquina, Paso, PasoCubo, PasoTic,
-                       PasoTicCoily, ResumenMaquina, Transicion)
+                       ResumenMaquina, Transicion)
 
 
 def orden_simbolos(s: str):
@@ -36,9 +36,6 @@ def estado(id_: str, p: Partida) -> EstadoPartida:
         vidas=p.cantidad_vidas(),
         estado_bola=p.estado_bola,
         posicion_bola=p.posicion_bola(),
-        estado_coily=p.estado_coily,
-        fase_coily=p.fase_coily(),
-        posicion_coily=p.posicion_coily(),
         salida_mealy=list(p.salida_mealy),
         nivel_completo=p.nivel_completo(),
         game_over=p.game_over(),
@@ -50,11 +47,8 @@ def paso(p: automatas.Paso) -> Paso:
         movimiento=transicion(p.mov),
         cubo=PasoCubo(**p.cubo._asdict()) if p.cubo else None,
         choque=p.choque,
-        choque_coily=p.choque_coily,
-        uso_plato=p.uso_plato,
         vidas=transicion(p.vidas),
         retiro_bola=transicion(p.retiro_bola) if p.retiro_bola else None,
-        retiro_coily=transicion(p.retiro_coily) if p.retiro_coily else None,
     )
 
 
@@ -64,18 +58,6 @@ def paso_tic(p: automatas.PasoTic) -> PasoTic:
         choque=p.choque,
         vidas=transicion(p.vidas) if p.vidas else None,
         retiro_bola=transicion(p.retiro_bola) if p.retiro_bola else None,
-        retiro_coily=transicion(p.retiro_coily) if p.retiro_coily else None,
-    )
-
-
-def paso_tic_coily(p: automatas.PasoTicCoily) -> PasoTicCoily:
-    return PasoTicCoily(
-        coily=transicion(p.coily),
-        choque=p.choque,
-        bono_caida=p.bono_caida,
-        vidas=transicion(p.vidas) if p.vidas else None,
-        retiro_bola=transicion(p.retiro_bola) if p.retiro_bola else None,
-        retiro_coily=transicion(p.retiro_coily) if p.retiro_coily else None,
     )
 
 

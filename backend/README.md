@@ -10,7 +10,6 @@ backend/
     cubo.py         4.3  Moore de color de cubo (una tabla por nivel)
     vidas.py        4.4  Moore de vidas
     bola.py              Moore del enemigo: baja al azar (s o d) con cada tic; con X se retira
-    coily.py             Mealy de Coily: huevo, eclosión y persecución
     partida.py      4.5  conexión entre máquinas (h', AF_i): saltos (teclado) y tics (reloj)
     piramide.py          geometría de la pirámide (no es una máquina)
 
@@ -79,38 +78,6 @@ los dos en el mismo evento, no pueden cruzarse sin chocar.
 
 Cada vez que la máquina de vidas lee `X` (choque o caída), la bola también lee `X` y
 sale de la pirámide (`bF`). Así no puede quitar dos vidas seguidas.
-
-Desde los cubos exteriores 10 y 14, los saltos hacia afuera (`a` desde 10 y `w`
-desde 14) usan platos voladores reutilizables para volver a la cima sin perder una
-vida. Al usarlos, la bola lee `X` y Coily lee `J`; ambos se retiran.
-
-## Coily y sus autómatas
-
-Coily usa una Mealy con tres fases codificadas en sus estados:
-
-- `fuera`: espera una aparición. El frontend decide una espera aleatoria (igual que
-  para la bola roja); al llegar su tic, empieza en `h0`, el huevo de la cima.
-- `h0`…`h27`: el huevo baja una fila con cada entrada `S` o `D`. Reutiliza las
-  transiciones de la Moore de la bola (`s`/`d`), así que sigue la misma geometría.
-  Cuando aterriza en la fila inferior, cambia a `c21`…`c27`: el huevo eclosiona ahí.
-- `c0`…`c27`: en cada tic de caza, Coily elige una tecla desde su propia posición:
-  si Q*bert está más abajo, elige `s` si está a la izquierda/encima de su columna,
-  o `d` si está a la derecha; si está más arriba elige `a`/`w` análogamente. A igual
-  fila elige una diagonal hacia el lado de Q*bert. Las diagonales siguen la misma
-  Mealy de movimiento. Si
-  la dirección elegida sale de la pirámide, vuelve a `fuera`, retira a la bola y
-  concede 50 puntos. Si Coily cae en el mismo cubo que Q*bert, le quita una vida;
-  Q*bert también puede alcanzarlo con un salto.
-
-La Mealy devuelve `H<i>` mientras el huevo está en el cubo `i`, `C<i>` mientras
-Coily está en el cubo `i`, `X` si cae y `N` si está fuera. `X` (caída de Q*bert) y
-`J` (Q*bert usa un plato) despejan a Coily. Una colisión con Coily hace que la
-máquina de vidas lea `X` y retira también a la bola.
-
-Para inspeccionar toda la tabla, abrir `GET /api/maquinas/coily` o traducir una
-palabra corta de entradas en `POST /api/maquinas/coily/traducir`. En la tabla,
-`S`/`D` representan los tics del huevo; el endpoint de juego recibe `s`/`d` y los
-transforma a esas entradas.
 
 ## Usar la lógica desde Python
 
