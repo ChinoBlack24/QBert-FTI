@@ -239,3 +239,97 @@ def test_sin_tics_la_bola_no_molesta():
     p = Partida(2)
     p.jugar(recorrido_cerrado() * 2)
     assert p.nivel_completo() and p.cantidad_vidas() == 3
+
+
+def test_el_huevo_aparece_y_eclosiona_al_llegar_a_la_base():
+    p = Partida()
+    assert p.fase_coily() == "fuera" and p.posicion_coily() is None
+    paso = p.tic_coily("s")
+    assert paso.coily.e == "S"
+    assert p.fase_coily() == "huevo" and p.posicion_coily() == 0
+    for _ in range(6):
+        paso = p.tic_coily("s")
+    assert paso.coily.q_nuevo == "c21"
+    assert p.fase_coily() == "persecucion" and p.posicion_coily() == 21
+    assert p.estado_bola == "bF"  # su reloj y su estado son independientes
+
+
+def test_coily_elige_un_salto_hacia_qbert_segun_fila_y_columna():
+    p = Partida()
+    p.estado_coily = "c0"
+    p.estado_mov = "q3"  # Q*bert está más abajo; Coily baja a la izquierda.
+    paso = p.tic_coily("s")
+    assert paso.coily == ("c0", "s", "c1", "C1")
+    assert p.estado_mov == "q3" and p.estado_coily == "c1"
+
+
+@pytest.mark.parametrize(
+    ("coily", "qbert", "direccion"),
+    [
+        (0, 3, "s"),  # fila inferior
+        (0, 2, "d"),  # fila inferior, a la derecha
+        (8, 0, "a"),  # fila superior, a la izquierda
+        (6, 2, "w"),  # fila superior, a la derecha
+        (8, 6, "a"),  # misma fila, a la izquierda
+        (6, 9, "d"),  # misma fila, a la derecha
+    ],
+)
+def test_direccion_de_caza_prioriza_fila_y_luego_columna(coily, qbert, direccion):
+    p = Partida()
+    p.estado_coily = f"c{coily}"
+    p.estado_mov = f"q{qbert}"
+    assert p._direccion_hacia_qbert() == direccion
+
+
+def test_qbert_al_caerse_retira_coily_y_bola():
+    p = Partida()
+    p.saltar("s")
+    p.tic("d")
+    p.tic_coily("s")  # huevo en la cima
+    paso = p.saltar("a")  # Q*bert cae desde el cubo 1
+    assert paso.retiro_bola is not None
+    assert paso.retiro_coily == ("h0", CAIDA, "fuera", "N")
+    assert p.fase_coily() == "fuera" and p.posicion_bola() is None
+
+
+def test_choque_con_coily_resta_una_vida_y_retira_a_los_enemigos():
+    p = Partida()
+    p.estado_mov = "q1"
+    p.estado_coily = "c3"
+    paso = p.saltar("s")
+    assert paso.choque_coily and paso.vidas.e == CAIDA
+    assert p.cantidad_vidas() == 2
+    assert paso.retiro_coily is not None and paso.retiro_bola is not None
+    assert p.fase_coily() == "fuera" and p.posicion_bola() is None
+
+
+def test_dos_choques_en_el_mismo_salto_restan_una_sola_vida():
+    p = Partida()
+    p.estado_mov = "q1"
+    p.estado_coily = "c3"
+    p.estado_bola = "b3"
+    paso = p.saltar("s")
+    assert paso.choque and paso.choque_coily
+    assert p.cantidad_vidas() == 2
+
+
+def test_huevo_que_eclosiona_sobre_qbert_lo_choca():
+    p = Partida()
+    p.estado_mov = "q21"
+    p.estado_coily = "h15"
+    paso = p.tic_coily("s")
+    assert paso.choque
+    assert paso.vidas.e == CAIDA and p.cantidad_vidas() == 2
+    assert p.fase_coily() == "fuera" and p.posicion_bola() is None
+
+
+def test_caida_de_coily_en_caza_limpia_enemigos_y_otorga_bono():
+    p = Partida()
+    p.estado_coily = "c21"
+    p.estado_mov = "q21"
+    p.estado_bola = "b0"
+    paso = p.tic_coily("s")
+    assert paso.coily == ("c21", "d", "fuera", CAIDA)
+    assert paso.bono_caida
+    assert p.fase_coily() == "fuera" and p.posicion_bola() is None
+    assert paso.vidas is None and p.cantidad_vidas() == 3

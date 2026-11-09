@@ -2,9 +2,10 @@
  * Estado del juego en el frontend. No decide nada: manda cada evento al
  * backend y guarda lo que responde.
  *
- * Hay dos fuentes de eventos, como en el modelo:
+ * Hay tres fuentes de eventos, como en el modelo:
  *   - el teclado  -> saltar(tecla)   (lo lee la Mealy de Q*bert)
  *   - el reloj    -> tic             (lo lee la Moore de la bola)
+ *   - el reloj    -> ticCoily        (lo lee la Mealy del huevo o de la caza)
  *
  * El reloj arranca con el primer salto de cada nivel, para que la bola no le
  * caiga encima a Q*bert antes de que el jugador empiece.
@@ -26,7 +27,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as api from "../api/cliente";
-import type { EstadoPartida, Paso, PasoTic, Piramide, Tecla } from "../api/cliente";
+import type {
+  EstadoPartida, Paso, PasoTic, PasoTicCoily, Piramide, Tecla,
+} from "../api/cliente";
 
 /** Cada cuánto baja la bola mientras está en la pirámide, en milisegundos. */
 export const MS_POR_TIC = 800;
@@ -34,6 +37,8 @@ export const MS_POR_TIC = 800;
 export const MS_REAPARECER = { min: 1500, max: 4000 };
 /** Cuánto dura un salto de Q*bert: el tiempo entre apretar la tecla y aterrizar. */
 export const MS_SALTO = 500;
+/** Coily espera dos duraciones de salto de Q*bert entre movimientos de caza. */
+export const MS_POR_TIC_COILY = MS_SALTO * 2;
 /** Cuánto tarda Q*bert en volver a la cima después de caerse. */
 export const MS_REAPARICION = 2000;
 /** Cuánto queda quieto Q*bert después de que lo choca un enemigo. */
@@ -47,7 +52,8 @@ export type VistaQbert =
 
 export type Evento =
   | { tipo: "salto"; paso: Paso }
-  | { tipo: "tic"; paso: PasoTic };
+  | { tipo: "tic"; paso: PasoTic }
+  | { tipo: "tic-coily"; paso: PasoTicCoily };
 
 const azarEntre = ({ min, max }: { min: number; max: number }) =>
   min + Math.random() * (max - min);
@@ -215,8 +221,8 @@ export function useJuego() {
         despues(MS_SALTO + MS_REAPARICION, () => setVistaQbert({ tipo: "normal" }));
       } else {
         despues(MS_SALTO, () => setColoresCongelados(null));
-        if (paso.choque) {
-          // Saltó sobre la bola: aterriza y queda quieto MS_ESPERA_CHOQUE.
+        if (paso.choque || paso.choque_coily) {
+          // Aterriza y queda quieto tras chocar con cualquiera de los enemigos.
           bloquear(MS_SALTO + MS_ESPERA_CHOQUE);
           pausar(MS_SALTO + MS_ESPERA_CHOQUE);
         }
@@ -235,6 +241,18 @@ export function useJuego() {
       pausar(MS_ESPERA_CHOQUE);
     }
   }), [encolar]);
+
+  const ticCoily = useCallback(() => encolar(async () => {
+    if (!idPartida.current) return;
+    const { paso, estado } = await api.ticCoily(idPartida.current);
+    actualizar(estado);
+    if (paso) setUltimo({ tipo: "tic-coily", paso });
+    if (paso?.choque || paso?.bono_caida) {
+      bloquear(MS_ESPERA_CHOQUE);
+      pausar(MS_ESPERA_CHOQUE);
+    }
+    if (paso?.bono_caida) sumarPuntos(50);
+  }), [encolar, sumarPuntos]);
 
   const siguienteNivel = useCallback(() => encolar(async () => {
     if (!idPartida.current) return;
@@ -274,6 +292,17 @@ export function useJuego() {
       clearTimeout(temporizador);
     };
   }, [enJuego, tic]);
+
+  const faseCoily = estado?.fase_coily;
+  const posicionCoily = estado?.posicion_coily;
+  useEffect(() => {
+    if (!enJuego || !faseCoily) return;
+    const espera = faseCoily === "fuera"
+      ? azarEntre(MS_REAPARECER)
+      : faseCoily === "huevo" ? MS_POR_TIC : MS_POR_TIC_COILY;
+    const temporizador = setTimeout(() => { void ticCoily(); }, espera);
+    return () => clearTimeout(temporizador);
+  }, [enJuego, faseCoily, posicionCoily, ticCoily]);
 
   return {
     piramide, estado, ultimo, ultimoSalto, coloresCongelados, vistaQbert, error,

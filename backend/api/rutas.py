@@ -14,8 +14,8 @@ from automatas import FILAS, CANTIDAD_CUBOS, MAQUINAS, NIVELES, Partida, fila_co
 
 from . import conversion as conv
 from .esquemas import (Cubo, EstadoPartida, Maquina, NombreMaquina, NuevaPartida, Piramide,
-                       ResultadoSalto, ResultadoTic, ResultadoTraduccion, ResumenMaquina, Salto,
-                       Tic, Traduccion)
+                       ResultadoSalto, ResultadoTic, ResultadoTicCoily, ResultadoTraduccion,
+                       ResumenMaquina, Salto, Tic, Traduccion)
 
 assert set(NombreMaquina.__args__) == set(MAQUINAS)
 
@@ -72,6 +72,20 @@ def tic(id: str, pedido: Tic | None = None):
     direccion = (pedido.direccion if pedido else None) or random.choice("sd")
     paso = p.tic(direccion)
     return ResultadoTic(paso=conv.paso_tic(paso) if paso else None, estado=conv.estado(id, p))
+
+
+@router.post("/partidas/{id}/tic-coily", response_model=ResultadoTicCoily,
+             operation_id="ticCoily", tags=["partidas"])
+def tic_coily(id: str, pedido: Tic | None = None):
+    p = _buscar(id)
+    # La elección aleatoria de la bajada y la espera hasta el spawn pertenecen al juego,
+    # no a la MEF de Coily.
+    direccion = (pedido.direccion if pedido else None) or random.choice("sd")
+    paso = p.tic_coily(direccion)
+    return ResultadoTicCoily(
+        paso=conv.paso_tic_coily(paso) if paso else None,
+        estado=conv.estado(id, p),
+    )
 
 
 @router.post("/partidas/{id}/nivel-siguiente", response_model=EstadoPartida,

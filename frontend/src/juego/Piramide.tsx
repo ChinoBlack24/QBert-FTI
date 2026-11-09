@@ -1,7 +1,7 @@
 /**
  * La pirámide en perspectiva isométrica, en SVG. Recibe todo calculado:
  * la posición (fila, columna) de cada cubo viene del backend (/api/piramide)
- * y los colores y las posiciones de Q*bert y de la bola, del estado de la partida.
+ * y los colores y posiciones de Q*bert, la bola y Coily, del estado de la partida.
  */
 
 import type { EstadoPartida, Paso, Piramide as DatosPiramide } from "../api/cliente";
@@ -81,6 +81,31 @@ function Bola({ x, y, cubo }: { x: number; y: number; cubo: number }) {
   );
 }
 
+function Coily({ x, y, fase }: { x: number; y: number; fase: "huevo" | "persecucion" }) {
+  const pos = useSalto(x, y, SALTO_BOLA);
+  return (
+    <g className="coily" transform={`translate(${pos.x}, ${pos.y - 12})`}>
+      {fase === "huevo" ? (
+        <>
+          <ellipse cx="0" cy="-2" rx="11" ry="14" fill="#ead9a2" stroke="#8e7440" strokeWidth="2" />
+          <circle cx="-4" cy="-4" r="2" fill="#8b55bd" />
+          <circle cx="4" cy="3" r="2.5" fill="#8b55bd" />
+        </>
+      ) : (
+        <>
+          <ellipse cx="-8" cy="5" rx="11" ry="8" fill="#8b55bd" />
+          <ellipse cx="2" cy="2" rx="10" ry="9" fill="#a96bd4" />
+          <circle cx="9" cy="-8" r="9" fill="#b879e0" />
+          <circle cx="6" cy="-10" r="3" fill="white" />
+          <circle cx="12" cy="-10" r="3" fill="white" />
+          <circle cx="7" cy="-10" r="1.5" fill="#21152d" />
+          <circle cx="13" cy="-10" r="1.5" fill="#21152d" />
+        </>
+      )}
+    </g>
+  );
+}
+
 export function Piramide({ datos, estado, ultimo, ultimoSalto, coloresCongelados, vistaQbert }: {
   datos: DatosPiramide; estado: EstadoPartida; ultimo: Evento | null; ultimoSalto: Paso | null;
   coloresCongelados: string[] | null; vistaQbert: VistaQbert;
@@ -98,6 +123,7 @@ export function Piramide({ datos, estado, ultimo, ultimoSalto, coloresCongelados
     qbert = { ...desde, x: afuera.x, y: afuera.y + CAIDA_EXTRA };
   }
   const bola = estado.posicion_bola === null ? null : cubos[estado.posicion_bola];
+  const coily = estado.posicion_coily === null ? null : cubos[estado.posicion_coily];
   const ancho = datos.filas * LADO;
   const alto = (datos.filas - 1) * (MEDIO + ALTO_CARA) + CUARTO + ALTO_CARA;
 
@@ -107,6 +133,8 @@ export function Piramide({ datos, estado, ultimo, ultimoSalto, coloresCongelados
         <Cubo key={c.numero} x={c.x} y={c.y} color={COLORES[colores[c.numero]] ?? "#888"} />
       ))}
       {bola && <Bola x={bola.x} y={bola.y} cubo={bola.numero} />}
+      {coily && estado.fase_coily !== "fuera" &&
+        <Coily x={coily.x} y={coily.y} fase={estado.fase_coily} />}
       {/* Oculto mientras espera para reaparecer: al volver se monta de nuevo en la cima. */}
       {!estado.game_over && vistaQbert.tipo !== "oculto" && (
         <Qbert x={qbert.x} y={qbert.y} cayendo={vistaQbert.tipo === "cayendo"}

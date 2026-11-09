@@ -14,6 +14,8 @@ export type ResultadoSalto = Esquemas["ResultadoSalto"];
 export type Paso = Esquemas["Paso"];
 export type ResultadoTic = Esquemas["ResultadoTic"];
 export type PasoTic = Esquemas["PasoTic"];
+export type ResultadoTicCoily = Esquemas["ResultadoTicCoily"];
+export type PasoTicCoily = Esquemas["PasoTicCoily"];
 export type Transicion = Esquemas["Transicion"];
 export type Maquina = Esquemas["Maquina"];
 export type ResumenMaquina = Esquemas["ResumenMaquina"];
@@ -72,6 +74,11 @@ export const saltar = (id: string, tecla: Tecla) =>
 /** Pasa el tiempo: la bola baja. Sin dirección, el backend tira una moneda. */
 export const tic = (id: string, direccion?: Direccion) =>
   pedir<ResultadoTic>("POST", `/partidas/${id}/tic`, { direccion: direccion ?? null });
+
+/** Avanza el huevo de Coily o lo hace aparecer con una dirección aleatoria. */
+export const ticCoily = (id: string, direccion?: Direccion) =>
+  pedir<ResultadoTicCoily>("POST", `/partidas/${id}/tic-coily`,
+    { direccion: direccion ?? null });
 
 export const pasarDeNivel = (id: string) =>
   pedir<EstadoPartida>("POST", `/partidas/${id}/nivel-siguiente`);
